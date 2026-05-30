@@ -1,0 +1,40 @@
+# Banco de dados local
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Segredos
+.env
+
+# PDFs locais
+pdfs/
+uploads/
+
+# Scripts de desenvolvimento
+setup.py
+migrar_senhas.py
+run.py
+
+# Testes
+tests/
+.pytest_cache/
+test_*.db*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore

@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CondoMarket</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+  /* ─── TOKENS ──────────────────────────────────────────── */
+  :root {
+    --black:    #0f0f0f;
+    --white:    #ffffff;
+    --g50:      #fafafa;
+    --g100:     #f5f5f5;
+    --g200:     #e8e8e8;
+    --g300:     #d4d4d4;
+    --g400:     #a3a3a3;
+    --g500:     #737373;
+    --g600:     #525252;
+    --g700:     #404040;
+    --g800:     #262626;
+    --g900:     #171717;
+    --wapp:     #25D366;
+    --wapp-dk:  #1da851;
+    --red:      #dc2626;
+    --amber:    #b45309;
+    --blue:     #1d4ed8;
+    --emerald:  #059669;
+    --r-sm:     4px;
+    --r-md:     8px;
+    --r-lg:     12px;
+  }
+
+  /* ─── RESET ──────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--g100);
+    color: var(--black);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button  { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea, select { font-family: inherit; }
+  a { text-decoration: none; color: inherit; }
+  ::placeholder { color: var(--g400); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--g300); border-radius: 3px; }
+
+  /* ─── UTILITIES ──────────────────────────────────────── */
+  .hidden { display: none !important; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+
+  /* ─── ANNOUNCEMENT BAR ───────────────────────────────── */
+  #announce {
+    background: var(--black);
+    color: var(--white);
+    font-size: .75rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-align: center;
+    padding: .55rem 3rem;
+    position: relative;
+  }
+  #announce-close {
+    position: absolute;
+    right: 1rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--g400);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: .25rem;
+    transition: color .15s;
+  }
+  #announce-close:hover { color: var(--white); }
+
+  /* ─── NAVBAR ─────────────────────────────────────────── */
+  .navbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--g200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .nav-logo {
+    font-size: 1.125rem;
+    font-weight: 900;
+    letter-spacing: -.03em;
+    color: var(--black);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .nav-logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--black);
+    flex-shrink: 0;
+  }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    color: var(--g600);
+  }
+  .nav-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--black);
+    color: var(--white);
+    font-size: .6875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: .02em;
+    flex-shrink: 0;
+  }
+  .nav-role-pill {
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border: 1px solid var(--g300);
+    color: var(--g600);
+    border-radius: 20px;
+    padding: 2px 9px;
+  }
+  .btn-nav-logout {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--g500);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-sm);
+    padding: .375rem .875rem;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+  }
+  .btn-nav-logout:hover { border-color: var(--g400); color: var(--black); }
+
+  /* ─── BUTTONS ─────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    font-weight: 600;
+    font-size: .875rem;
+    letter-spacing: .01em;
+    border-radius: var(--r-md);
+    padding: .75rem 1.5rem;
+    transition: all .15s;
+    width: 100%;
+  }
+  /* Primary — solid black */
+  .btn-primary {
+    background: var(--black);
+    color: var(--white);
+    border: 1.5px solid var(--black);
+  }
+  .btn-primary:hover { background: var(--g800); border-color: var(--g800); }
+  .btn-primary:active { background: var(--g900); }
+  /* Outline */
+  .btn-outline {
+    background: transparent;
+    color: var(--black);
+    border: 1.5px solid var(--black);
+  }
+  .btn-outline:hover { background: var(--g100); }
+  /* Ghost */
+  .btn-ghost {
+    background: var(--g100);
+    color: var(--g700);
+    border: 1.5px solid var(--g200);
+  }
+  .btn-ghost:hover { background: var(--g200); }
+  /* WhatsApp */
+  .btn-wapp {
+    background: var(--wapp);
+    color: var(--white);
+    border: 1.5px solid var(--wapp);
+    font-size: .8125rem;
+  }
+  .btn-wapp:hover { background: var(--wapp-dk); border-color: var(--wapp-dk); }
+  /* Sizes */
+  .btn-sm { font-size: .8125rem; padding: .5rem 1rem; width: auto; }
+  .btn-xs { font-size: .75rem; padding: .375rem .75rem; width: auto; }
+
+  /* ─── FORM ELEMENTS ──────────────────────────────────── */
+  .form-label {
+    display: block;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--g600);
+    margin-bottom: .45rem;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: .7rem 1rem;
+    border: 1.5px solid var(--g200);
+    border-radius: var(--r-md);
+    font-size: .9375rem;
+    color: var(--black);
+    background: var(--white);
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--black);
+    box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+  }
+  .form-textarea { resize: vertical; min-height: 88px; }
+  .form-select { cursor: pointer; }
+  .form-hint {
+    font-size: .75rem;
+    color: var(--g500);
+    margin-top: .35rem;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .form-group { margin-bottom: .875rem; }
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .875rem;
+    color: var(--g700);
+    cursor: pointer;
+    margin-bottom: 1rem;
+  }
+  .form-check input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--black);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .char-count {
+    font-size: .6875rem;
+    color: var(--g400);
+    text-align: right;
+    margin-top: .25rem;
+  }
+
+  /* ─── PDF UPLOAD ─────────────────────────────────────── */
+  .pdf-upload-zone {
+    border: 1.5px dashed var(--g300);
+    border-radius: var(--r-md);
+    padding: 1.25rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    background: var(--g50);
+    position: relative;
+  }
+  .pdf-upload-zone:hover { border-color: var(--black); background: var(--white); }
+  .pdf-upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .pdf-upload-label {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--g600);
+    pointer-events: none;
+  }
+  .pdf-upload-hint {
+    font-size: .6875rem;
+    color: var(--g400);
+    margin-top: .25rem;
+    pointer-events: none;
+  }
+  .pdf-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    background: var(--g50);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-md);
+    padding: .75rem 1rem;
+    margin-bottom: .625rem;
+    font-size: .8125rem;
+  }
+  .pdf-current-left {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--g700);
+    font-weight: 500;
+    min-width: 0;
+  }
+  .pdf-current-left span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pdf-selected-name {
+    margin-top: .5rem;
+    font-size: .75rem;
+    color: var(--emerald);
+    font-weight: 600;
+    display: none;
+    align-items: center;
+    gap: .375rem;
+  }
+  .pdf-dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--g600);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-sm);
+    padding: .35rem .75rem;
+    background: var(--white);
+    cursor: pointer;
+    transition: all .15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .pdf-dl-btn:hover { border-color: var(--black); color: var(--black); }
+
+  /* ─── ALERTS ─────────────────────────────────────────── */
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: .625rem;
+    padding: .75rem 1rem;
+    border-radius: var(--r-md);
+    font-size: .8125rem;
+    line-height: 1.5;
+    margin-bottom: .875rem;
+  }
+  .alert-icon { flex-shrink: 0; margin-top: .05em; }
+  .alert-error   { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+  .alert-success { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+  .alert-info    { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  .alert-warning { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+
+  /* ─── DIVIDER ─────────────────────────────────────────── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    color: var(--g300);
+    font-size: .6875rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin: 1rem 0;
+  }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--g200); }
+
+  /* ─── SPINNER ─────────────────────────────────────────── */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+  .spinner-dark {
+    border-color: rgba(0,0,0,.12);
+    border-top-color: var(--black);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .875rem;
+    padding: 4rem 1rem;
+    color: var(--g400);
+    font-size: .875rem;
+  }
+  .loading-state .spinner { width: 28px; height: 28px; }
+
+  /* ─── TOAST ──────────────────────────────────────────── */
+  #toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: .5rem;
+  }
+  .toast {
+    background: var(--white);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+    padding: .875rem 1.25rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    color: var(--g800);
+    box-shadow: 0 4px 24px rgba(0,0,0,.12);
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    max-width: 320px;
+    animation: slideUp .25s ease;
+    border-left: 3px solid transparent;
+  }
+  .toast.success { border-left-color: var(--emerald); }
+  .toast.error   { border-left-color: var(--red); }
+  .toast.info    { border-left-color: var(--black); }
+  .toast.out     { animation: fadeOut .25s ease forwards; }
+  @keyframes slideUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeOut   { to   { opacity:0; transform:translateY(4px); } }
+  @keyframes fadeInUp  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
+
+  /* ─── BADGE / PILL ───────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+  }
+  .badge-black  { background:var(--black); color:var(--white); }
+  .badge-outline{ background:transparent; color:var(--g600); border-color:var(--g300); }
+  .badge-green  { background:#f0fdf4; color:#166534; border-color:#bbf7d0; }
+  .badge-blue   { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
+  .badge-amber  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+
+  /* ═══════════════════════════════════════════════════════
+     AUTH SCREEN — split layout
+  ═══════════════════════════════════════════════════════ */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+  }
+  /* Left dark panel */
+  .auth-panel-left {
+    width: 45%;
+    background: var(--black);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .auth-panel-left::after {
+    content: '';
+    position: absolute;
+    bottom: -120px; right: -120px;
+    width: 380px; height: 380px;
+    border: 60px solid rgba(255,255,255,.04);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .auth-panel-left::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 260px; height: 260px;
+    border: 50px solid rgba(255,255,255,.035);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .auth-brand {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+  }
+  .auth-brand-mark {
+    width: 36px; height: 36px;
+    border: 2px solid var(--white);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+  }
+  .auth-brand-name {
+    font-size: 1.125rem;
+    font-weight: 900;
+    letter-spacing: -.03em;
+    color: var(--white);
+  }
+  .auth-hero {
+    position: relative;
+    z-index: 1;
+  }
+  .auth-hero-tag {
+    display: inline-block;
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--g400);
+    border: 1px solid var(--g700);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-bottom: 1.25rem;
+  }
+  .auth-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: 1.08;
+    color: var(--white);
+    margin-bottom: 1rem;
+  }
+  .auth-hero p {
+    font-size: .9375rem;
+    color: var(--g400);
+    line-height: 1.65;
+    max-width: 300px;
+  }
+  .auth-features {
+    display: flex;
+    flex-direction: column;
+    gap: .625rem;
+    position: relative;
+    z-index: 1;
+  }
+  .auth-feature {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    font-size: .8125rem;
+    color: var(--g400);
+  }
+  .auth-feature-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--g600);
+    flex-shrink: 0;
+  }
+
+  /* Right white panel */
+  .auth-panel-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 2rem;
+    background: var(--white);
+    overflow-y: auto;
+  }
+  .auth-form-box {
+    width: 100%;
+    max-width: 380px;
+    animation: fadeInUp .4s ease;
+  }
+  .auth-form-title {
+    font-size: 1.625rem;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    margin-bottom: .375rem;
+  }
+  .auth-form-sub {
+    font-size: .875rem;
+    color: var(--g500);
+    margin-bottom: 1.75rem;
+  }
+
+  /* Tabs */
+  .auth-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--g200);
+    margin-bottom: 1.75rem;
+  }
+  .auth-tab {
+    padding: .6rem 0;
+    margin-right: 1.75rem;
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--g400);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+    background: none;
+    border-left: none;
+    border-top: none;
+    border-right: none;
+  }
+  .auth-tab.active { color: var(--black); border-bottom-color: var(--black); }
+
+  /* Step indicator */
+  .step-bar {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    margin-bottom: 1.25rem;
+  }
+  .step-seg {
+    height: 3px;
+    border-radius: 2px;
+    flex: 1;
+    background: var(--g200);
+    transition: background .3s;
+  }
+  .step-seg.done   { background: var(--emerald); }
+  .step-seg.active { background: var(--black); }
+  .step-label {
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--g400);
+    white-space: nowrap;
+    margin-left: .5rem;
+  }
+
+  /* Demo hint */
+
+  /* ═══════════════════════════════════════════════════════
+     APP LAYOUT
+  ═══════════════════════════════════════════════════════ */
+  #app-screen { min-height: 100vh; display: flex; flex-direction: column; }
+  .main { flex: 1; max-width: 1140px; margin: 0 auto; width: 100%; padding: 2rem 1.5rem; }
+
+  /* Page header */
+  .page-hd { margin-bottom: 2rem; }
+  .page-hd-eyebrow {
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--g400);
+    margin-bottom: .5rem;
+  }
+  .page-hd h2 {
+    font-size: 1.875rem;
+    font-weight: 900;
+    letter-spacing: -.04em;
+    color: var(--black);
+  }
+  .page-hd p {
+    font-size: .9375rem;
+    color: var(--g500);
+    margin-top: .375rem;
+  }
+
+  /* ─── SECTION CARD ───────────────────────────────────── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--g100);
+  }
+  .card-title {
+    font-size: .9375rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--black);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card-title-icon {
+    width: 30px; height: 30px;
+    border: 1px solid var(--g200);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  /* ─── SEARCH BAR ─────────────────────────────────────── */
+  .search-wrap {
+    background: var(--white);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+    padding: 1.125rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .875rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .search-field {
+    flex: 1;
+    min-width: 180px;
+    position: relative;
+  }
+  .search-field-icon {
+    position: absolute;
+    left: .875rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--g400);
+    font-size: 13px;
+    pointer-events: none;
+  }
+  .search-field input {
+    width: 100%;
+    padding: .625rem .875rem .625rem 2.25rem;
+    border: 1px solid var(--g200);
+    border-radius: var(--r-md);
+    font-size: .875rem;
+    color: var(--black);
+    background: var(--g50);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .search-field input:focus { border-color: var(--black); background: var(--white); }
+  .search-sep {
+    width: 1px;
+    height: 28px;
+    background: var(--g200);
+    flex-shrink: 0;
+  }
+  .filter-select {
+    padding: .625rem .875rem;
+    border: 1px solid var(--g200);
+    border-radius: var(--r-md);
+    font-size: .875rem;
+    color: var(--g700);
+    background: var(--g50);
+    cursor: pointer;
+    outline: none;
+    min-width: 170px;
+    transition: border-color .15s;
+  }
+  .filter-select:focus { border-color: var(--black); }
+  .results-label {
+    font-size: .8125rem;
+    color: var(--g400);
+    margin-bottom: 1.25rem;
+    letter-spacing: .01em;
+  }
+  .results-label strong { color: var(--black); font-weight: 700; }
+
+  /* ─── VENDOR CARDS GRID ──────────────────────────────── */
+  .vendors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 1px;
+    background: var(--g200);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .vendor-card {
+    background: var(--white);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: background .15s;
+  }
+  .vendor-card:hover { background: var(--g50); }
+
+  .vc-top { display: flex; gap: .875rem; align-items: flex-start; }
+  .vc-emoji {
+    width: 52px; height: 52px;
+    border: 1px solid var(--g200);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    background: var(--g50);
+  }
+  .vc-meta { flex: 1; min-width: 0; }
+  .vc-badge-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .375rem; }
+  .vc-name {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    color: var(--black);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .vc-cat {
+    font-size: .75rem;
+    color: var(--g500);
+    margin-top: .2rem;
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+  }
+  .vc-desc {
+    font-size: .875rem;
+    color: var(--g600);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+  .vc-actions { margin-top: auto; }
+
+  /* ─── EMPTY STATE ─────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--g400);
+    background: var(--white);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+  }
+  .empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: .4;
+  }
+  .empty-state h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--g600);
+    letter-spacing: -.02em;
+    margin-bottom: .5rem;
+  }
+  .empty-state p { font-size: .875rem; }
+
+  /* ─── STATS GRID ─────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--g200);
+    border: 1px solid var(--g200);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .stat-block {
+    background: var(--white);
+    padding: 1.5rem;
+    transition: background .15s;
+  }
+  .stat-block:hover { background: var(--g50); }
+  .stat-eyebrow {
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--g400);
+    margin-bottom: .5rem;
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+  }
+  .stat-value {
+    font-size: 2.25rem;
+    font-weight: 900;
+    letter-spacing: -.05em;
+    color: var(--black);
+    line-height: 1;
+  }
+
+  /* ─── ADMIN GRID ─────────────────────────────────────── */
+  .admin-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+
+  /* ─── TABLE ──────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+  thead th {
+    padding: .625rem 1rem;
+    text-align: left;
+    font-size: .625rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--g400);
+    background: var(--g50);
+    border-bottom: 1px solid var(--g200);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: .875rem 1rem;
+    border-bottom: 1px solid var(--g100);
+    color: var(--g700);
+    font-size: .8125rem;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--g50); }
+  td strong { color: var(--black); font-weight: 600; }
+
+  /* ─── VENDOR PROFILE (view) ──────────────────────────── */
+  .profile-banner {
+    background: var(--black);
+    border-radius: var(--r-lg);
+    padding: 2rem 2rem 2rem 2rem;
+    color: var(--white);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+    min-height: 148px;
+  }
+  .profile-banner::before {
+    content: attr(data-emoji);
+    position: absolute;
+    right: 2rem; top: 50%;
+    transform: translateY(-50%);
+    font-size: 6rem;
+    opacity: .1;
+    pointer-events: none;
+    line-height: 1;
+  }
+  .profile-banner-title {
+    font-size: 1.625rem;
+    font-weight: 900;
+    letter-spacing: -.04em;
+  }
+  .profile-banner-desc {
+    font-size: .875rem;
+    color: var(--g400);
+    margin-top: .375rem;
+    max-width: 400px;
+  }
+  .profile-banner-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--g500);
+    border: 1px solid var(--g700);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-top: .875rem;
+  }
+
+  .profile-row {
+    display: flex;
+    gap: .875rem;
+    padding: .875rem 0;
+    border-bottom: 1px solid var(--g100);
+  }
+  .profile-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .profile-row-icon {
+    width: 32px; height: 32px;
+    border: 1px solid var(--g200);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--g500);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .profile-row-label {
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--g400);
+    margin-bottom: .2rem;
+  }
+  .profile-row-value { font-size: .9375rem; color: var(--black); font-weight: 500; }
+
+  /* ─── PREVIEW STRIP ──────────────────────────────────── */
+  .preview-strip {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--g400);
+    margin-bottom: 1rem;
+  }
+  .preview-strip::before, .preview-strip::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--g200);
+  }
+
+  /* ─── MODAL ──────────────────────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeIn .2s ease;
+  }
+  .modal {
+    background: var(--white);
+    border-radius: var(--r-lg);
+    padding: 2rem;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    animation: fadeInUp .25s ease;
+  }
+  .modal-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .modal-title { font-size: 1.125rem; font-weight: 800; letter-spacing: -.03em; }
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--g100);
+    color: var(--g500);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+  }
+  .modal-close:hover { background: var(--g200); color: var(--black); }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .auth-panel-left { display: none; }
+    .auth-panel-right { background: var(--g100); }
+    .auth-form-box { background: var(--white); border: 1px solid var(--g200); border-radius: var(--r-lg); padding: 2rem; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .admin-grid { grid-template-columns: 1fr; }
+    .vendors-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .main { padding: 1rem; }
+    .navbar { padding: 0 1rem; }
+    .form-row { grid-template-columns: 1fr; }
+    .search-wrap { flex-direction: column; }
+    .search-field, .filter-select { width: 100%; min-width: unset; }
+    .search-sep { display: none; }
+    .profile-banner { min-height: unset; }
+    .profile-banner::before { display: none; }
+  }
+  </style>
+</head>
+<body>
+
+<!-- ── TOAST CONTAINER ── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="auth-screen">
+
+  <!-- Left panel -->
+  <div class="auth-panel-left">
+    <div class="auth-brand">
+      <div class="auth-brand-mark">🏪</div>
+      <span class="auth-brand-name">CondoMarket</span>
+    </div>
+
+    <div class="auth-hero">
+      <div class="auth-hero-tag">Plataforma de Condomínio</div>
+      <h1>O mercado do seu condomínio, digital.</h1>
+      <p>Conecte moradores a prestadores locais de forma simples, segura e sem sair de casa.</p>
+    </div>
+
+    <div class="auth-features">
+      <div class="auth-feature"><div class="auth-feature-dot"></div>Acesso exclusivo por token do condomínio</div>
+      <div class="auth-feature"><div class="auth-feature-dot"></div>Dados residenciais protegidos e privados</div>
+      <div class="auth-feature"><div class="auth-feature-dot"></div>Contato direto via WhatsApp</div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-panel-right">
+    <div class="auth-form-box">
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Criar conta</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="login-pane">
+        <div id="login-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input class="form-input" id="l-tel" type="tel" placeholder="Ex: 11987654321" maxlength="20"
+            onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="l-pwd" type="password" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Entrar na conta</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="register-pane" class="hidden">
+
+        <!-- Step 1 -->
+        <div id="reg-s1">
+          <div class="step-bar">
+            <div class="step-seg active"></div>
+            <div class="step-seg"></div>
+            <span class="step-label">1 / 2</span>
+          </div>
+          <p style="font-size:.875rem;color:var(--g500);margin-bottom:1.25rem;">
+            Informe o código do seu condomínio para começar.
+          </p>
+          <div id="reg1-alert"></div>
+          <div class="form-group">
+            <label class="form-label">Código do Condomínio</label>
+            <input class="form-input" id="r-token" type="text" placeholder="Ex: RECANTO2026"
+              style="text-transform:uppercase;letter-spacing:.06em"
+              onkeydown="if(event.key==='Enter')validateToken()" />
+            <p class="form-hint">Solicite ao administrador do seu condomínio</p>
+          </div>
+          <button class="btn btn-primary" id="btn-validate" onclick="validateToken()">Validar código</button>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="reg-s2" class="hidden">
+          <div class="step-bar">
+            <div class="step-seg done"></div>
+            <div class="step-seg active"></div>
+            <span class="step-label">2 / 2</span>
+          </div>
+          <div id="reg2-alert"></div>
+          <div id="reg-condo-badge" class="alert alert-success" style="margin-bottom:1rem">
+            ✓ Condomínio validado
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nome completo</label>
+            <input class="form-input" id="r-nome" type="text" placeholder="Seu nome completo" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefone</label>
+            <input class="form-input" id="r-tel" type="tel" placeholder="Ex: 11987654321" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input class="form-input" id="r-pwd" type="password" placeholder="Mínimo 4 caracteres" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Bloco</label>
+              <input class="form-input" id="r-bloco" type="text" placeholder="A" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Apartamento</label>
+              <input class="form-input" id="r-apto" type="text" placeholder="101" />
+            </div>
+          </div>
+          <label class="form-check">
+            <input type="checkbox" id="r-vendedor" />
+            Quero anunciar como prestador de serviço
+          </label>
+          <div style="display:flex;gap:.625rem">
+            <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem" onclick="backStep1()">←</button>
+            <button class="btn btn-primary" style="flex:1" id="btn-register" onclick="doRegister()">Criar conta</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     APP SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="app-screen" class="hidden">
+
+  <!-- Announcement bar -->
+  <div id="announce">
+    Marketplace exclusivo para moradores do condomínio — dados privados e protegidos.
+    <button id="announce-close" onclick="document.getElementById('announce').remove()">✕</button>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <div class="nav-logo-dot"></div>
+      CONDO<span style="font-weight:300">MARKET</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-user">
+        <div class="nav-avatar" id="nav-av"></div>
+        <span id="nav-name" style="color:var(--black)"></span>
+        <span class="nav-role-pill" id="nav-role"></span>
+      </div>
+      <button class="btn-nav-logout" onclick="doLogout()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="main" id="main"></main>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const S = { token: null, user: null, condoToken: null, condoName: null, _vendors: [] };
+
+// ─── API ─────────────────────────────────────────────────
+async function api(method, path, body) {
+  const h = { 'Content-Type': 'application/json' };
+  if (S.token) h['Authorization'] = 'Bearer ' + S.token;
+  const r = await fetch(path, { method, headers: h, body: body ? JSON.stringify(body) : null });
+  if (r.status === 204) return null;
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || 'Erro ' + r.status);
+  return d;
+}
+
+// ─── TOAST ───────────────────────────────────────────────
+function toast(type, msg) {
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = 'toast ' + type;
+  const icons = { success: '✓', error: '✕', info: '·' };
+  d.innerHTML = `<span style="font-weight:700;font-size:1rem">${icons[type]||'·'}</span>${msg}`;
+  c.appendChild(d);
+  setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 280); }, 3500);
+}
+
+// ─── ALERT HELPERS ────────────────────────────────────────
+function setAlert(id, type, msg) {
+  document.getElementById(id).innerHTML = msg
+    ? `<div class="alert alert-${type}"><span class="alert-icon">${type==='error'?'⚠':'ℹ'}</span>${msg}</div>` : '';
+}
+
+// ─── LOADING BUTTON ───────────────────────────────────────
+function setBtnLoad(id, on, label = '') {
+  const b = document.getElementById(id); if (!b) return;
+  b.disabled = on;
+  b.innerHTML = on ? `<span class="spinner"></span>` : label;
+}
+
+// ─── AUTH TABS ────────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('tab-login').classList.toggle('active', t === 'login');
+  document.getElementById('tab-register').classList.toggle('active', t === 'register');
+  document.getElementById('login-pane').classList.toggle('hidden', t !== 'login');
+  document.getElementById('register-pane').classList.toggle('hidden', t !== 'register');
+}
+
+// ─── LOGIN ────────────────────────────────────────────────
+async function doLogin() {
+  setAlert('login-alert', '', '');
+  const tel = document.getElementById('l-tel').value.trim();
+  const pwd = document.getElementById('l-pwd').value;
+  if (!tel || !pwd) { setAlert('login-alert', 'warning', 'Preencha todos os campos.'); return; }
+  setBtnLoad('btn-login', true);
+  try {
+    const d = await api('POST', '/api/auth/login', { telefone: tel, senha: pwd });
+    S.token = d.token; S.user = d.user;
+    // Token salvo em cookie httpOnly pelo servidor (nao acessivel via JS)
+    enterApp();
+  } catch(e) { setAlert('login-alert', 'error', e.message); }
+  finally { setBtnLoad('btn-login', false, 'Entrar na conta'); }
+}
+
+// ─── VALIDATE TOKEN ───────────────────────────────────────
+async function validateToken() {
+  setAlert('reg1-alert', '', '');
+  const t = document.getElementById('r-token').value.trim().toUpperCase();
+  if (!t) { setAlert('reg1-alert', 'warning', 'Digite o código.'); return; }
+  setBtnLoad('btn-validate', true);
+  try {
+    const d = await api('POST', '/api/auth/validate-token', { token: t });
+    if (d.valid) {
+      S.condoToken = t; S.condoName = d.condominio_nome;
+      document.getElementById('reg-condo-badge').innerHTML =
+        `✓ <strong>${d.condominio_nome}</strong> — condomínio confirmado`;
+      document.getElementById('reg-s1').classList.add('hidden');
+      document.getElementById('reg-s2').classList.remove('hidden');
+    } else {
+      setAlert('reg1-alert', 'error', 'Código inválido. Solicite ao seu administrador.');
+    }
+  } catch(e) { setAlert('reg1-alert', 'error', e.message); }
+  finally { setBtnLoad('btn-validate', false, 'Validar código'); }
+}
+
+function backStep1() {
+  document.getElementById('reg-s2').classList.add('hidden');
+  document.getElementById('reg-s1').classList.remove('hidden');
+  setAlert('reg2-alert','','');
+}
+
+// ─── REGISTER ─────────────────────────────────────────────
+async function doRegister() {
+  setAlert('reg2-alert','','');
+  const nome  = document.getElementById('r-nome').value.trim();
+  const tel   = document.getElementById('r-tel').value.trim();
+  const pwd   = document.getElementById('r-pwd').value;
+  const bloco = document.getElementById('r-bloco').value.trim();
+  const apto  = document.getElementById('r-apto').value.trim();
+  const vend  = document.getElementById('r-vendedor').checked;
+  if (!nome||!tel||!pwd||!bloco||!apto) { setAlert('reg2-alert','warning','Preencha todos os campos.'); return; }
+  if (pwd.length < 4) { setAlert('reg2-alert','warning','Senha muito curta (mín. 4 caracteres).'); return; }
+  setBtnLoad('btn-register', true);
+  try {
+    const reg = await api('POST', '/api/auth/register', {
+      token_condominio: S.condoToken, nome, telefone: tel, senha: pwd,
+      bloco, apartamento: apto, is_vendedor: vend
+    });
+    // Cookie httpOnly setado automaticamente pelo servidor
+    toast('success', 'Conta criada! Faça login.');
+    switchTab('login');
+    document.getElementById('l-tel').value = tel;
+    document.getElementById('reg-s2').classList.add('hidden');
+    document.getElementById('reg-s1').classList.remove('hidden');
+    document.getElementById('r-token').value = '';
+  } catch(e) { setAlert('reg2-alert','error', e.message); }
+  finally { setBtnLoad('btn-register', false, 'Criar conta'); }
+}
+
+// ─── ENTER APP ────────────────────────────────────────────
+function enterApp() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  const u = S.user;
+  const ini = u.nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('nav-av').textContent = ini;
+  document.getElementById('nav-name').textContent = u.nome.split(' ')[0];
+  document.getElementById('nav-role').textContent = u.is_admin ? 'Admin' : u.is_vendedor ? 'Prestador' : 'Morador';
+  if (u.is_admin) viewAdmin();
+  else if (u.is_vendedor) viewVendor();
+  else viewMarket();
+}
+
+async function doLogout() {
+  try { await api('POST', '/api/auth/logout'); } catch(_) {}
+  S.token = null; S.user = null;
+  document.getElementById('app-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('main').innerHTML = '';
+}
+
+// ─── EMOJI / TYPE HELPERS ─────────────────────────────────
+function emoji(cat) {
+  const c = (cat||'').toLowerCase();
+  if (c.includes('bolo')||c.includes('doce')||c.includes('confeit')) return '🍰';
+  if (c.includes('hambúrguer')||c.includes('burger')||c.includes('lanche')) return '🍔';
+  if (c.includes('pizza')) return '🍕';
+  if (c.includes('marmita')||c.includes('almoço')||c.includes('comida')) return '🍱';
+  if (c.includes('elétric')||c.includes('eletric')) return '⚡';
+  if (c.includes('beleza')||c.includes('cabelo')||c.includes('estétic')||c.includes('manicure')) return '💅';
+  if (c.includes('pet')||c.includes('tosa')) return '🐾';
+  if (c.includes('aula')||c.includes('educa')) return '📚';
+  if (c.includes('limpeza')||c.includes('diarista')||c.includes('faxina')) return '🧹';
+  if (c.includes('alimentaç')) return '🍽️';
+  return '🛍️';
+}
+function isServico(cat) {
+  return ['serviç','aula','educa','beleza','estétic','estetica','manut','consert','repar','limpeza','diarista','pet','tosa']
+    .some(k => (cat||'').toLowerCase().includes(k));
+}
+
+// ════════════════════════════════════════════════════════════
+// MARKETPLACE VIEW
+// ════════════════════════════════════════════════════════════
+async function viewMarket() {
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div class="page-hd">
+      <div class="page-hd-eyebrow">Marketplace</div>
+      <h2>Prestadores do condomínio</h2>
+      <p>Encontre produtos e serviços dos seus vizinhos</p>
+    </div>
+    <div class="search-wrap">
+      <div class="search-field">
+        <span class="search-field-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input id="mkt-q" placeholder="Buscar por nome ou descrição…" oninput="filterMkt()" />
+      </div>
+      <div class="search-sep"></div>
+      <select class="filter-select" id="mkt-cat" onchange="filterMkt()">
+        <option value="">Todas as categorias</option>
+      </select>
+    </div>
+    <div class="results-label" id="mkt-count"></div>
+    <div id="mkt-body"><div class="loading-state"><div class="spinner spinner-dark"></div>Carregando…</div></div>
+  `;
+  try {
+    const vendors = await api('GET', '/api/marketplace/vendors');
+    S._vendors = Array.isArray(vendors) ? vendors : [];
+    // Derive categories from vendors list (no extra round-trip needed)
+    const cats = [...new Set(S._vendors.map(v => v.categoria).filter(Boolean))].sort();
+    const sel = document.getElementById('mkt-cat');
+    cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+    renderCards(S._vendors);
+  } catch(e) {
+    document.getElementById('mkt-body').innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+  }
+}
+
+function filterMkt() {
+  const q = document.getElementById('mkt-q').value.toLowerCase();
+  const cat = document.getElementById('mkt-cat').value;
+  const filtered = S._vendors.filter(v =>
+    (!q || v.nome_negocio.toLowerCase().includes(q) || v.descricao.toLowerCase().includes(q)) &&
+    (!cat || v.categoria === cat)
+  );
+  renderCards(filtered);
+}
+
+function renderCards(vendors) {
+  const body = document.getElementById('mkt-body');
+  const cnt  = document.getElementById('mkt-count');
+  if (!vendors.length) {
+    cnt.innerHTML = '';
+    body.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🛍</div>
+        <h3>Nenhum resultado encontrado</h3>
+        <p>Tente outros filtros ou aguarde novos cadastros.</p>
+      </div>`;
+    return;
+  }
+  cnt.innerHTML = `<strong>${vendors.length}</strong> prestador${vendors.length !== 1 ? 'es' : ''} encontrado${vendors.length !== 1 ? 's' : ''}`;
+  body.innerHTML = `
+    <div class="vendors-grid">
+      ${vendors.map(v => {
+        const wappUrl = `https://wa.me/55${v.whatsapp.replace(/\D/g,'')}?text=Ol%C3%A1%2C+vim+pelo+CondoMarket%21`;
+        const svc = isServico(v.categoria);
+        return `
+        <div class="vendor-card">
+          <div class="vc-top">
+            <div class="vc-emoji">${emoji(v.categoria)}</div>
+            <div class="vc-meta">
+              <div class="vc-badge-row">
+                <span class="badge ${svc ? 'badge-blue' : 'badge-amber'}">${svc ? 'Serviço' : 'Produto'}</span>
+              </div>
+              <div class="vc-name" title="${v.nome_negocio}">${v.nome_negocio}</div>
+              <div class="vc-cat">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                ${v.categoria || 'Sem categoria'}
+              </div>
+            </div>
+          </div>
+          <p class="vc-desc">${v.descricao || '<em style="color:var(--g400)">Sem descrição.</em>'}</p>
+          <div class="vc-actions" style="display:flex;flex-direction:column;gap:.5rem">
+            ${v.whatsapp
+              ? `<a href="${wappUrl}" target="_blank" class="btn btn-wapp">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  Chamar no WhatsApp
+                </a>`
+              : `<span style="font-size:.75rem;color:var(--g400)">Sem contato cadastrado</span>`
+            }
+            ${v.tem_pdf
+              ? `<button onclick="downloadVendorPdf(${v.id},'${v.nome_negocio.replace(/'/g,'')}')"
+                    class="btn btn-ghost btn-sm" style="font-size:.8rem;justify-content:center;width:100%">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Ver Cardápio / Catálogo PDF
+                  </button>`
+              : ''
+            }
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// VENDOR VIEW
+// ════════════════════════════════════════════════════════════
+async function viewVendor() {
+  const m = document.getElementById('main');
+  m.innerHTML = `<div class="loading-state"><div class="spinner spinner-dark"></div>Carregando…</div>`;
+  try {
+    const p = await api('GET', '/api/vendor/profile');
+    if (!p) renderVendorCreate();
+    else renderVendorShow(p);
+  } catch(e) {
+    m.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+  }
+}
+
+const CATS = ['Alimentação','Serviços Gerais','Beleza','Pet','Aulas/Educação','Outros'];
+
+function renderVendorShow(p) {
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div class="page-hd">
+      <div class="page-hd-eyebrow">Painel do Prestador</div>
+      <h2>Seu perfil</h2>
+      <p>Visible para todos os moradores do condomínio</p>
+    </div>
+
+    <div class="profile-banner" data-emoji="${emoji(p.categoria)}">
+      <div>
+        <div class="profile-banner-title">${p.nome_negocio}</div>
+        <div class="profile-banner-desc">${p.descricao || 'Sem descrição.'}</div>
+        <div class="profile-banner-cat">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          ${p.categoria}
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.1);color:var(--white);border-color:rgba(255,255,255,.2);flex-shrink:0;align-self:flex-start"
+        onclick='renderVendorEdit(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+        Editar perfil
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><div class="card-title-icon">ℹ</div>Detalhes do perfil</div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon">🏪</div>
+        <div><div class="profile-row-label">Nome do Negócio</div><div class="profile-row-value">${p.nome_negocio}</div></div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon">🏷</div>
+        <div><div class="profile-row-label">Categoria</div><div class="profile-row-value">${p.categoria}</div></div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon">📱</div>
+        <div>
+          <div class="profile-row-label">WhatsApp</div>
+          <div class="profile-row-value">
+            <a href="https://wa.me/55${p.whatsapp.replace(/\D/g,'')}" target="_blank"
+               style="color:var(--wapp);font-weight:600">${p.whatsapp}</a>
+          </div>
+        </div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon">📝</div>
+        <div><div class="profile-row-label">Descrição</div><div class="profile-row-value">${p.descricao||'—'}</div></div>
+      </div>
+      <div class="profile-row">
+        <div class="profile-row-icon">📄</div>
+        <div style="flex:1">
+          <div class="profile-row-label">Cardápio / Catálogo PDF</div>
+          <div class="profile-row-value" style="margin-top:.35rem">
+            ${p.tem_pdf
+              ? `<a href="/api/vendor/profile/pdf" target="_blank" class="pdf-dl-btn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Baixar / Visualizar PDF
+                </a>`
+              : `<span style="font-size:.8125rem;color:var(--g400)">Nenhum PDF cadastrado</span>`}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-strip">Pré-visualização no marketplace</div>
+    <div style="pointer-events:none;max-width:340px">
+      <div class="vendors-grid" style="border-radius:var(--r-lg)">
+        ${(() => {
+          const svc = isServico(p.categoria);
+          return `<div class="vendor-card">
+            <div class="vc-top">
+              <div class="vc-emoji">${emoji(p.categoria)}</div>
+              <div class="vc-meta">
+                <div class="vc-badge-row"><span class="badge ${svc?'badge-blue':'badge-amber'}">${svc?'Serviço':'Produto'}</span></div>
+                <div class="vc-name">${p.nome_negocio}</div>
+                <div class="vc-cat">${p.categoria}</div>
+              </div>
+            </div>
+            <p class="vc-desc">${p.descricao||'—'}</p>
+            <div class="vc-actions"><div class="btn btn-wapp" style="cursor:default">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              Chamar no WhatsApp</div></div>
+          </div>`;
+        })()}
+      </div>
+    </div>
+  `;
+}
+
+function vendorFormHTML(p) {
+  const v = k => p && p[k] ? p[k] : '';
+  const hasPdf = p && p.tem_pdf;
+  return `
+    <div class="form-group">
+      <label class="form-label">Nome do Negócio *</label>
+      <input class="form-input" id="vf-nome" value="${v('nome_negocio')}" placeholder="Ex: Doces da Ana" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Categoria *</label>
+      <select class="form-select" id="vf-cat">
+        ${CATS.map(c=>`<option value="${c}" ${v('categoria')===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">WhatsApp *</label>
+      <input class="form-input" id="vf-wapp" value="${v('whatsapp')}" placeholder="Somente números: 11999990000" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrição <span style="font-weight:400;color:var(--g400)">(máx. 300 caracteres)</span></label>
+      <textarea class="form-textarea" id="vf-desc" maxlength="300" placeholder="Descreva seus produtos ou serviços…">${v('descricao')}</textarea>
+      <div class="char-count"><span id="vf-cc">0</span> / 300</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cardápio / Catálogo em PDF <span style="font-weight:400;color:var(--g400)">(opcional · máx. 5 MB)</span></label>
+      ${hasPdf ? `
+      <div class="pdf-current" id="pdf-current-row">
+        <div class="pdf-current-left">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>PDF cadastrado</span>
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <a href="/api/vendor/profile/pdf" target="_blank" class="pdf-dl-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Visualizar
+          </a>
+          <button type="button" class="pdf-dl-btn" style="color:var(--red);border-color:#fecaca" onclick="removePdf()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            Remover
+          </button>
+        </div>
+      </div>` : ''}
+      <div class="pdf-upload-zone" id="pdf-zone" onclick="document.getElementById('vf-pdf').click()">
+        <input type="file" id="vf-pdf" accept=".pdf,application/pdf" style="display:none" onchange="onPdfSelect(this)" />
+        <div class="pdf-upload-label">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:inline;vertical-align:-3px;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          ${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}
+        </div>
+        <div class="pdf-upload-hint">Clique para selecionar um arquivo .pdf</div>
+      </div>
+      <div class="pdf-selected-name" id="pdf-selected-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="pdf-selected-name-text"></span>
+      </div>
+    </div>
+  `;
+}
+
+function setupCC() {
+  const t = document.getElementById('vf-desc');
+  const c = document.getElementById('vf-cc');
+  if (t && c) { c.textContent = t.value.length; t.oninput = () => c.textContent = t.value.length; }
+}
+
+function onPdfSelect(input) {
+  const file = input.files?.[0];
+  const label = document.getElementById('pdf-selected-label');
+  const nameEl = document.getElementById('pdf-selected-name-text');
+  if (file) {
+    nameEl.textContent = file.name;
+    label.style.display = 'flex';
+    // highlight zone
+    document.getElementById('pdf-zone').style.borderColor = 'var(--emerald)';
+  } else {
+    label.style.display = 'none';
+    document.getElementById('pdf-zone').style.borderColor = '';
+  }
+}
+
+async function removePdf() {
+  if (!confirm('Remover o PDF cadastrado?')) return;
+  try {
+    await fetch('/api/vendor/profile/pdf', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + S.token }
+    });
+    toast('info', 'PDF removido.');
+    const row = document.getElementById('pdf-current-row');
+    if (row) row.remove();
+    const zone = document.getElementById('pdf-zone');
+    if (zone) zone.querySelector('.pdf-upload-label').textContent = 'Enviar PDF';
+  } catch(e) {
+    toast('error', 'Erro ao remover PDF.');
+  }
+}
+
+async function downloadVendorPdf(vendorId, nomeNegocio) {
+  try {
+    const r = await fetch(`/api/marketplace/vendor/${vendorId}/pdf`, {
+      headers: { Authorization: 'Bearer ' + S.token }
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      toast('error', d.detail || 'PDF não disponível.');
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cardapio_${nomeNegocio.replace(/\s+/g,'_')}.pdf`;
+    a.target = '_blank';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch(e) {
+    toast('error', 'Erro ao baixar PDF.');
+  }
+}
+
+async function uploadPdfIfSelected() {
+  const input = document.getElementById('vf-pdf');
+  const file = input?.files?.[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('pdf', file);
+  const r = await fetch('/api/vendor/profile/pdf', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + S.token },
+    body: fd
+  });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(d.detail || 'Erro ao enviar PDF');
+  }
+}
+
+function renderVendorCreate() {
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div class="page-hd">
+      <div class="page-hd-eyebrow">Painel do Prestador</div>
+      <h2>Criar perfil comercial</h2>
+      <p>Cadastre seu negócio para aparecer no marketplace</p>
+    </div>
+    <div class="card">
+      <div id="vf-alert"></div>
+      ${vendorFormHTML(null)}
+      <button class="btn btn-primary" id="btn-sv" onclick="saveVendor(false)">Publicar perfil</button>
+    </div>`;
+  setupCC();
+}
+
+function renderVendorEdit(p) {
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div class="page-hd">
+      <div class="page-hd-eyebrow">Painel do Prestador</div>
+      <h2>Editar perfil</h2>
+      <p>Atualize as informações do seu negócio</p>
+    </div>
+    <div class="card">
+      <div id="vf-alert"></div>
+      ${vendorFormHTML(p)}
+      <div style="display:flex;gap:.625rem">
+        <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem"
+          onclick='renderVendorShow(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" id="btn-sv" onclick="saveVendor(true)">Salvar alterações</button>
+      </div>
+    </div>`;
+  setupCC();
+}
+
+async function saveVendor(isEdit) {
+  const ae = document.getElementById('vf-alert');
+  ae.innerHTML = '';
+  const nome  = document.getElementById('vf-nome').value.trim();
+  const cat   = document.getElementById('vf-cat').value;
+  const wapp  = document.getElementById('vf-wapp').value.trim();
+  const desc  = document.getElementById('vf-desc').value.trim();
+  if (!nome || !wapp) { ae.innerHTML = '<div class="alert alert-warning">⚠ Preencha nome e WhatsApp.</div>'; return; }
+
+  const hasPdfSelected = !!document.getElementById('vf-pdf')?.files?.[0];
+  setBtnLoad('btn-sv', true);
+  try {
+    // 1. Salva perfil
+    await api(isEdit ? 'PUT' : 'POST', '/api/vendor/profile', { nome_negocio: nome, categoria: cat, descricao: desc, whatsapp: wapp });
+
+    // 2. Envia PDF se selecionado
+    if (hasPdfSelected) {
+      try {
+        await uploadPdfIfSelected();
+        toast('success', isEdit ? 'Perfil e PDF atualizados!' : 'Perfil criado com PDF!');
+      } catch(pdfErr) {
+        toast('error', 'Perfil salvo, mas erro no PDF: ' + pdfErr.message);
+      }
+    } else {
+      toast('success', isEdit ? 'Perfil atualizado!' : 'Perfil criado com sucesso!');
+    }
+
+    const p2 = await api('GET', '/api/vendor/profile');
+    renderVendorShow(p2);
+  } catch(e) {
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    setBtnLoad('btn-sv', false, isEdit ? 'Salvar alterações' : 'Publicar perfil');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// ADMIN VIEW
+// ════════════════════════════════════════════════════════════
+async function viewAdmin() {
+  const m = document.getElementById('main');
+  m.innerHTML = `<div class="loading-state"><div class="spinner spinner-dark"></div>Carregando dados…</div>`;
+  try {
+    const [stats, condosResp, usersResp] = await Promise.all([
+      api('GET', '/api/admin/stats'),
+      api('GET', '/api/admin/condominiums'),
+      api('GET', '/api/admin/users'),
+    ]);
+    renderAdminContent(stats, condosResp.items ?? condosResp, usersResp.items ?? usersResp);
+  } catch(e) {
+    m.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+  }
+}
+
+function renderAdminContent(stats, condos, users) {
+  window._condos = condos; window._users = users;
+  const m = document.getElementById('main');
+  m.innerHTML = `
+    <div class="page-hd" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div class="page-hd-eyebrow">Administração</div>
+        <h2>Painel de controle</h2>
+        <p>Gerencie condomínios e usuários da plataforma</p>
+      </div>
+      <button class="btn btn-outline btn-sm" style="flex-shrink:0;margin-top:.25rem" onclick="renderAdminEditProfile()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar meu acesso
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-block">
+        <div class="stat-eyebrow">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+          Condomínios
+        </div>
+        <div class="stat-value">${stats.condominios}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-eyebrow">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Total Usuários
+        </div>
+        <div class="stat-value">${stats.usuarios}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-eyebrow">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Moradores
+        </div>
+        <div class="stat-value">${stats.moradores}</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-eyebrow">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          Prestadores
+        </div>
+        <div class="stat-value">${stats.prestadores}</div>
+      </div>
+    </div>
+
+    <!-- Condos + Form -->
+    <div class="admin-grid">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-hd">
+          <div class="card-title"><div class="card-title-icon">🏢</div>Condomínios</div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <div class="search-field">
+            <span class="search-field-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input id="adm-cs" placeholder="Buscar condomínio…" oninput="filterCondos()" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Nome</th><th>Token</th></tr></thead>
+            <tbody id="adm-ct">${condoRows(condos)}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:0">
+        <div class="card-hd">
+          <div class="card-title"><div class="card-title-icon">+</div>Novo Condomínio</div>
+        </div>
+        <div id="adm-ca"></div>
+        <div class="form-group">
+          <label class="form-label">Nome</label>
+          <input class="form-input" id="adm-cn" placeholder="Ex: Residencial Aurora" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token de Acesso</label>
+          <input class="form-input" id="adm-ct2" placeholder="Ex: AURORA2026"
+            style="text-transform:uppercase;letter-spacing:.06em"
+            oninput="this.value=this.value.toUpperCase()" />
+          <p class="form-hint">Código usado pelos moradores no cadastro</p>
+        </div>
+        <button class="btn btn-primary" id="btn-cc" onclick="createCondo()">Cadastrar condomínio</button>
+      </div>
+    </div>
+
+    <!-- Users table -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title"><div class="card-title-icon">👥</div>Usuários do sistema</div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="search-field" style="flex:1;min-width:160px">
+          <span class="search-field-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input id="adm-us" placeholder="Buscar por nome ou telefone…" oninput="filterUsers()" />
+        </div>
+        <input class="form-input" id="adm-ub" placeholder="Filtrar bloco…"
+          style="width:140px;padding:.55rem .875rem;font-size:.8125rem" oninput="filterUsers()" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Bloco</th><th>Apto</th><th>Condomínio</th><th>Perfil</th></tr></thead>
+          <tbody id="adm-ut">${userRows(users)}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function condoRows(list) {
+  if (!list.length) return `<tr><td colspan="3" style="text-align:center;color:var(--g400);padding:2rem">Nenhum condomínio.</td></tr>`;
+  return list.map(c => `
+    <tr>
+      <td><span class="badge badge-outline">${c.id}</span></td>
+      <td><strong>${c.nome}</strong></td>
+      <td><span class="badge badge-black">${c.token_acesso}</span></td>
+    </tr>`).join('');
+}
+
+function userRows(list) {
+  if (!list.length) return `<tr><td colspan="6" style="text-align:center;color:var(--g400);padding:2rem">Nenhum usuário.</td></tr>`;
+  return list.map(u => {
+    const badge = u.is_admin
+      ? `<span class="badge badge-black">Admin</span>`
+      : u.is_vendedor
+        ? `<span class="badge badge-amber">Prestador</span>`
+        : `<span class="badge badge-blue">Morador</span>`;
+    return `<tr>
+      <td><strong>${u.nome}</strong></td>
+      <td style="color:var(--g500)">${u.telefone}</td>
+      <td>${u.bloco||'—'}</td>
+      <td>${u.apartamento||'—'}</td>
+      <td>${u.condominio}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterCondos() {
+  const s = document.getElementById('adm-cs').value.toLowerCase();
+  const f = (window._condos||[]).filter(c => c.nome.toLowerCase().includes(s)||c.token_acesso.toLowerCase().includes(s));
+  document.getElementById('adm-ct').innerHTML = condoRows(f);
+}
+
+function filterUsers() {
+  const s = document.getElementById('adm-us').value.toLowerCase();
+  const b = document.getElementById('adm-ub').value.toLowerCase();
+  const f = (window._users||[]).filter(u =>
+    (!s || u.nome.toLowerCase().includes(s) || u.telefone.includes(s)) &&
+    (!b || (u.bloco||'').toLowerCase().includes(b))
+  );
+  document.getElementById('adm-ut').innerHTML = userRows(f);
+}
+
+async function createCondo() {
+  const ae = document.getElementById('adm-ca');
+  ae.innerHTML = '';
+  const nome = document.getElementById('adm-cn').value.trim();
+  const tok  = document.getElementById('adm-ct2').value.trim().toUpperCase();
+  if (!nome || !tok) { ae.innerHTML = '<div class="alert alert-warning">⚠ Preencha nome e token.</div>'; return; }
+  setBtnLoad('btn-cc', true);
+  try {
+    await api('POST', '/api/admin/condominiums', { nome, token_acesso: tok });
+    toast('success', `Condomínio "${nome}" cadastrado!`);
+    viewAdmin();
+  } catch(e) {
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    setBtnLoad('btn-cc', false, 'Cadastrar condomínio');
+  }
+}
+
+// ─── ADMIN EDIT PROFILE ───────────────────────────────────
+function renderAdminEditProfile() {
+  const m = document.getElementById('main');
+  const u = S.user;
+  m.innerHTML = `
+    <div class="page-hd">
+      <div class="page-hd-eyebrow">Administração</div>
+      <h2>Editar meu acesso</h2>
+      <p>Atualize seu nome, telefone ou senha</p>
+    </div>
+    <div class="card" style="max-width:480px">
+      <div id="adm-prof-alert"></div>
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input class="form-input" id="adp-nome" value="${u.nome || ''}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefone</label>
+        <input class="form-input" id="adp-tel" type="tel" value="${u.telefone || ''}" />
+      </div>
+      <div class="divider">Alterar senha (opcional)</div>
+      <div class="form-group">
+        <label class="form-label">Senha atual</label>
+        <input class="form-input" id="adp-pwd-atual" type="password" placeholder="Deixe vazio para não alterar" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nova senha</label>
+        <input class="form-input" id="adp-pwd-nova" type="password" placeholder="Mínimo 8 caracteres" />
+      </div>
+      <div style="display:flex;gap:.625rem">
+        <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem" onclick="viewAdmin()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" id="btn-adp" onclick="saveAdminProfile()">Salvar alterações</button>
+      </div>
+    </div>
+  `;
+}
+
+async function saveAdminProfile() {
+  const ae = document.getElementById('adm-prof-alert');
+  ae.innerHTML = '';
+  const nome     = document.getElementById('adp-nome').value.trim();
+  const tel      = document.getElementById('adp-tel').value.trim();
+  const pwdAtual = document.getElementById('adp-pwd-atual').value;
+  const pwdNova  = document.getElementById('adp-pwd-nova').value;
+
+  if (!nome || !tel) {
+    ae.innerHTML = '<div class="alert alert-warning">⚠ Nome e telefone são obrigatórios.</div>';
+    return;
+  }
+  if (pwdNova && !pwdAtual) {
+    ae.innerHTML = '<div class="alert alert-warning">⚠ Informe a senha atual para alterar a senha.</div>';
+    return;
+  }
+
+  const body = { nome, telefone: tel };
+  if (pwdNova) { body.senha_atual = pwdAtual; body.senha_nova = pwdNova; }
+
+  setBtnLoad('btn-adp', true);
+  try {
+    const d = await api('PUT', '/api/admin/profile', body);
+    S.user = { ...S.user, nome: d.user.nome, telefone: d.user.telefone };
+    const ini = d.user.nome.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('nav-av').textContent = ini;
+    document.getElementById('nav-name').textContent = d.user.nome.split(' ')[0];
+    toast('success', 'Acesso atualizado com sucesso!');
+    viewAdmin();
+  } catch(e) {
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    setBtnLoad('btn-adp', false, 'Salvar alterações');
+  }
+}
+
+// ─── INIT — restore session via cookie httpOnly ──────────
+(async function() {
+  // O cookie httpOnly e enviado automaticamente pelo navegador;
+  // nenhum token fica exposto ao JavaScript.
+  try {
+    const u = await api('GET', '/api/auth/me');
+    if (u && u.id) { S.user = u; enterApp(); }
+  } catch(_) { /* nao autenticado, exibe tela de login */ }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+# ── Segredos (NUNCA versionar) ────────────────────────────
+.env
+*.env
+
+# ── Banco de dados local ──────────────────────────────────
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ── PDFs enviados pelos usuarios ─────────────────────────
+pdfs/
+
+# ── Uploads temporarios ──────────────────────────────────
+uploads/
+
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Ambientes virtuais ────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ── Arquivos de teste / debug ─────────────────────────────
+test_write.txt
+test_marketplace.db
+test_marketplace.db-journal
+test_marketplace.db-wal
+test_marketplace.db-shm
+pytest-cache-files-*/
+
+# ── Notas de agentes / rascunhos ─────────────────────────
+AGENTS.md
+
+# ── Pytest / cobertura ────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDEs ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Sistema operacional ───────────────────────────────────
+.DS_Store
+Thumbs.db
