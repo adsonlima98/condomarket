@@ -571,3 +571,42 @@ class TestUrlDoBanco:
 
     def test_sqlite_nao_muda(self):
         assert _db._normalizar_url("sqlite:///marketplace.db") == "sqlite:///marketplace.db"
+
+
+# ---------------------------------------------------------------------------
+# Variaveis de ambiente vazias (painel da Vercel permite criar sem valor)
+# ---------------------------------------------------------------------------
+
+import subprocess
+import sys
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent
+
+
+def _importar_api(**env):
+    """Importa a api num processo limpo, com as variaveis de ambiente dadas."""
+    ambiente = {k: v for k, v in os.environ.items() if k not in ("VERCEL", "DATABASE_URL")}
+    ambiente.update(env, PYTHONIOENCODING="utf-8")
+    # utf-8 explicito: o caminho do projeto tem acento e o Windows decodificaria em cp1252
+    return subprocess.run([sys.executable, "-c", "import api"], cwd=RAIZ, env=ambiente,
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+
+class TestVariaveisDeAmbiente:
+
+    def test_variavel_vazia_usa_o_padrao_em_vez_de_quebrar(self):
+        # Em producao, BCRYPT_ROUNDS="" derrubava o app: int('') -> ValueError
+        r = _importar_api(BCRYPT_ROUNDS="", PASSWORD_MIN_LEN="", ADMIN_PHONE="", DATABASE_URL="")
+        assert r.returncode == 0, r.stderr[-400:]
+
+    def test_na_vercel_sem_secret_key_falha_com_mensagem_clara(self):
+        # Sem SECRET_KEY fixa, cada instancia serverless gera a sua e os usuarios
+        # sao deslogados ao acaso. Melhor nao subir.
+        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="")
+        assert r.returncode != 0
+        assert "SECRET_KEY" in r.stderr
+
+    def test_na_vercel_com_tudo_definido_sobe(self):
+        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64)
+        assert r.returncode == 0, r.stderr[-400:]

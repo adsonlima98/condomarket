@@ -4,10 +4,21 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignK
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, deferred
 from sqlalchemy.pool import NullPool
 
+def _env(nome: str, padrao: str = None) -> str:
+    """Le uma variavel de ambiente tratando valor VAZIO como ausente.
+
+    O painel da Vercel permite criar variavel sem valor; os.environ.get(nome, padrao)
+    so usa o padrao quando a variavel nao existe, e o '' derrubava o app
+    (ex.: int('') em BCRYPT_ROUNDS).
+    """
+    valor = os.environ.get(nome, "").strip()
+    return valor if valor else padrao
+
+
 # ── Banco de dados ──────────────────────────────────────────────────────────
 # Producao (Vercel): DATABASE_URL=postgresql://... — injetada pela integracao Neon.
 # Desenvolvimento: sem DATABASE_URL, usa o SQLite local marketplace.db.
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///marketplace.db")
+DATABASE_URL = _env("DATABASE_URL", "sqlite:///marketplace.db")
 
 # Na Vercel o sistema de arquivos e somente leitura e nao persiste entre
 # execucoes: um SQLite ali perderia os dados (ou nem abriria). Falha cedo e claro.
@@ -44,7 +55,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # Fator de custo do bcrypt (12 em producao, 4 em testes para velocidade)
-BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
+BCRYPT_ROUNDS = int(_env("BCRYPT_ROUNDS", "12"))
 
 
 def hash_senha(senha: str) -> str:
@@ -150,8 +161,8 @@ def init_db():
         # ── Admin ──────────────────────────────────────────────────────────
         # Senha do admin vem de variavel de ambiente ADMIN_PASSWORD
         # Se nao definida, gera senha aleatoria e imprime UMA VEZ no console
-        admin_pwd = os.environ.get("ADMIN_PASSWORD")
-        admin_tel = os.environ.get("ADMIN_PHONE", "11999999999")
+        admin_pwd = _env("ADMIN_PASSWORD")
+        admin_tel = _env("ADMIN_PHONE", "11999999999")
 
         admin_existente = session.query(Usuario).filter_by(telefone=admin_tel).first()
         if not admin_existente:
@@ -190,7 +201,7 @@ def init_db():
             session.commit()
 
         # ── Dados de demonstracao (somente se SEED_DATA=true) ──────────────
-        if os.environ.get("SEED_DATA", "false").lower() == "true":
+        if _env("SEED_DATA", "false").lower() == "true":
             _seed_demo_data(session)
 
     finally:

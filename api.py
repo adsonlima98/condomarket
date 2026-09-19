@@ -22,14 +22,22 @@ from database import (
     SessionLocal, init_db,
     Condominio, Usuario, PerfilComercial, CardapioPdf,
     buscar_vendedores_por_condominio,
-    hash_senha, verificar_senha,
+    hash_senha, verificar_senha, _env,
 )
 
 from jose import jwt
 from datetime import datetime, timedelta
 
 # ── Seguranca ─────────────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "")
+SECRET_KEY = _env("SECRET_KEY", "")
+# Na Vercel cada instancia da funcao geraria a sua propria chave aleatoria: um token
+# emitido por uma instancia seria recusado por outra, e os usuarios seriam deslogados
+# ao acaso. Melhor nao subir.
+if os.environ.get("VERCEL") and not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY nao definida (ou vazia). Na Vercel defina em Settings > Environment "
+        "Variables um valor longo e aleatorio: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
     warnings.warn(
@@ -44,7 +52,7 @@ TOKEN_TTL_DAYS = 1
 # A Vercel limita o corpo de requisicao e de resposta de uma funcao a 4,5 MB.
 # O upload e o download do PDF passam inteiros pela funcao, entao o teto fica abaixo.
 PDF_MAX_SIZE_BYTES = 4 * 1024 * 1024
-PASSWORD_MIN_LEN = int(os.environ.get("PASSWORD_MIN_LEN", "8"))
+PASSWORD_MIN_LEN = int(_env("PASSWORD_MIN_LEN", "8"))
 COOKIE_NAME = "cm_auth"
 IS_TESTING = os.environ.get("TESTING") == "true"
 INDEX_HTML = Path(__file__).parent / "index.html"
@@ -126,7 +134,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="CondoMarket", lifespan=lifespan)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-_raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
+_raw_origins = _env("ALLOWED_ORIGINS", "")
 if not _raw_origins or _raw_origins.strip() == "*":
     import warnings
     warnings.warn(
