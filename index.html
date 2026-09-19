@@ -4,9 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CondoMarket</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
   /* ─── TOKENS ──────────────────────────────────────────── */
   :root {
@@ -22,8 +19,10 @@
     --g700:     #404040;
     --g800:     #262626;
     --g900:     #171717;
-    --wapp:     #25D366;
-    --wapp-dk:  #1da851;
+    /* Verde WhatsApp escurecido: o #25D366 original com texto branco dava 2:1 de
+       contraste (ilegivel sob sol); este da 5:1 e continua lido como WhatsApp. */
+    --wapp:     #1b7f45;
+    --wapp-dk:  #166b3a;
     --red:      #dc2626;
     --amber:    #b45309;
     --blue:     #1d4ed8;
@@ -31,22 +30,35 @@
     --r-sm:     4px;
     --r-md:     8px;
     --r-lg:     12px;
+    /* Texto terciario (rotulos, dicas, cabecalhos de tabela): 5,3:1 sobre branco */
+    --text-3:      #6b6b6b;
+    --placeholder: #8a8a8a;
+    /* Feedback de toque: rapido na ida, sem esperar o fim do gesto */
+    --t-controls: background-color .15s ease, border-color .15s ease, color .15s ease,
+                  box-shadow .15s ease, transform .1s ease-out;
   }
 
   /* ─── RESET ──────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-size: 16px; scroll-behavior: smooth; }
+  /* 100% (e nao 16px) respeita o tamanho de fonte escolhido pelo usuario */
+  html { font-size: 100%; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    /* Fonte do sistema: SF Pro no iPhone, Roboto no Android, Segoe UI no Windows —
+       ja vem com ajuste optico e nao depende de baixar nada do Google Fonts. */
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background: var(--g100);
     color: var(--black);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
   button  { font-family: inherit; cursor: pointer; border: none; background: none; }
+  /* O feedback de toque vem do :active de cada controle; o realce cinza do WebKit sobra.
+     touch-action: manipulation elimina a espera de duplo toque. */
+  button, a, input, select, textarea, label { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  :focus-visible { outline: 2px solid var(--black); outline-offset: 2px; }
   input, textarea, select { font-family: inherit; }
   a { text-decoration: none; color: inherit; }
-  ::placeholder { color: var(--g400); }
+  ::placeholder { color: var(--placeholder); }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-thumb { background: var(--g300); border-radius: 3px; }
 
@@ -75,12 +87,12 @@
     padding: .25rem;
     transition: color .15s;
   }
-  #announce-close:hover { color: var(--white); }
+  @media (hover: hover) { #announce-close:hover { color: var(--white); } }
 
   /* ─── NAVBAR ─────────────────────────────────────────── */
   .navbar {
     background: var(--white);
-    border-bottom: 1px solid var(--g200);
+    border-bottom: 1px solid rgba(0,0,0,.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -89,6 +101,13 @@
     position: sticky;
     top: 0;
     z-index: 200;
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .navbar {
+      background: rgba(255,255,255,.72);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+    }
   }
   .nav-logo {
     font-size: 1.125rem;
@@ -132,7 +151,7 @@
     flex-shrink: 0;
   }
   .nav-role-pill {
-    font-size: .625rem;
+    font-size: .6875rem;
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
@@ -149,12 +168,12 @@
     border: 1px solid var(--g200);
     border-radius: var(--r-sm);
     padding: .375rem .875rem;
-    transition: all .15s;
+    transition: var(--t-controls);
     display: flex;
     align-items: center;
     gap: .375rem;
   }
-  .btn-nav-logout:hover { border-color: var(--g400); color: var(--black); }
+  @media (hover: hover) { .btn-nav-logout:hover { border-color: var(--g400); color: var(--black); } }
 
   /* ─── BUTTONS ─────────────────────────────────────────── */
   .btn {
@@ -167,7 +186,7 @@
     letter-spacing: .01em;
     border-radius: var(--r-md);
     padding: .75rem 1.5rem;
-    transition: all .15s;
+    transition: var(--t-controls);
     width: 100%;
   }
   /* Primary — solid black */
@@ -176,7 +195,7 @@
     color: var(--white);
     border: 1.5px solid var(--black);
   }
-  .btn-primary:hover { background: var(--g800); border-color: var(--g800); }
+  @media (hover: hover) { .btn-primary:hover { background: var(--g800); border-color: var(--g800); } }
   .btn-primary:active { background: var(--g900); }
   /* Outline */
   .btn-outline {
@@ -184,14 +203,14 @@
     color: var(--black);
     border: 1.5px solid var(--black);
   }
-  .btn-outline:hover { background: var(--g100); }
+  @media (hover: hover) { .btn-outline:hover { background: var(--g100); } }
   /* Ghost */
   .btn-ghost {
     background: var(--g100);
     color: var(--g700);
     border: 1.5px solid var(--g200);
   }
-  .btn-ghost:hover { background: var(--g200); }
+  @media (hover: hover) { .btn-ghost:hover { background: var(--g200); } }
   /* WhatsApp */
   .btn-wapp {
     background: var(--wapp);
@@ -199,10 +218,18 @@
     border: 1.5px solid var(--wapp);
     font-size: .8125rem;
   }
-  .btn-wapp:hover { background: var(--wapp-dk); border-color: var(--wapp-dk); }
+  @media (hover: hover) { .btn-wapp:hover { background: var(--wapp-dk); border-color: var(--wapp-dk); } }
   /* Sizes */
   .btn-sm { font-size: .8125rem; padding: .5rem 1rem; width: auto; }
   .btn-xs { font-size: .75rem; padding: .375rem .75rem; width: auto; }
+  /* Resposta no toque (pointer-down), nao no clique: o controle afunda na hora */
+  .btn:active, .pdf-dl-btn:active, .btn-nav-logout:active,
+  .modal-close:active { transform: scale(.97); }
+  /* #announce-close fica de fora: ele ja usa transform para se centralizar */
+  #announce-close:active { color: var(--white); }
+  .btn:disabled { cursor: default; opacity: .7; }
+  .btn:disabled:active { transform: none; }
+  .pdf-upload-zone:active { background: var(--g100); }
 
   /* ─── FORM ELEMENTS ──────────────────────────────────── */
   .form-label {
@@ -219,7 +246,7 @@
     padding: .7rem 1rem;
     border: 1.5px solid var(--g200);
     border-radius: var(--r-md);
-    font-size: .9375rem;
+    font-size: 1rem;
     color: var(--black);
     background: var(--white);
     transition: border-color .15s, box-shadow .15s;
@@ -255,7 +282,7 @@
   }
   .char-count {
     font-size: .6875rem;
-    color: var(--g400);
+    color: var(--text-3);
     text-align: right;
     margin-top: .25rem;
   }
@@ -267,11 +294,11 @@
     padding: 1.25rem 1rem;
     text-align: center;
     cursor: pointer;
-    transition: all .15s;
+    transition: var(--t-controls);
     background: var(--g50);
     position: relative;
   }
-  .pdf-upload-zone:hover { border-color: var(--black); background: var(--white); }
+  @media (hover: hover) { .pdf-upload-zone:hover { border-color: var(--black); background: var(--white); } }
   .pdf-upload-zone input[type="file"] {
     position: absolute;
     inset: 0;
@@ -288,7 +315,7 @@
   }
   .pdf-upload-hint {
     font-size: .6875rem;
-    color: var(--g400);
+    color: var(--text-3);
     margin-top: .25rem;
     pointer-events: none;
   }
@@ -334,11 +361,11 @@
     padding: .35rem .75rem;
     background: var(--white);
     cursor: pointer;
-    transition: all .15s;
+    transition: var(--t-controls);
     text-decoration: none;
     white-space: nowrap;
   }
-  .pdf-dl-btn:hover { border-color: var(--black); color: var(--black); }
+  @media (hover: hover) { .pdf-dl-btn:hover { border-color: var(--black); color: var(--black); } }
 
   /* ─── ALERTS ─────────────────────────────────────────── */
   .alert {
@@ -393,7 +420,7 @@
     justify-content: center;
     gap: .875rem;
     padding: 4rem 1rem;
-    color: var(--g400);
+    color: var(--text-3);
     font-size: .875rem;
   }
   .loading-state .spinner { width: 28px; height: 28px; }
@@ -423,7 +450,9 @@
     max-width: 320px;
     animation: slideUp .25s ease;
     border-left: 3px solid transparent;
+    cursor: pointer;
   }
+  .toast-icon { font-weight: 700; font-size: 1rem; }
   .toast.success { border-left-color: var(--emerald); }
   .toast.error   { border-left-color: var(--red); }
   .toast.info    { border-left-color: var(--black); }
@@ -436,7 +465,7 @@
   /* ─── BADGE / PILL ───────────────────────────────────── */
   .badge {
     display: inline-block;
-    font-size: .625rem;
+    font-size: .6875rem;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
@@ -455,6 +484,7 @@
   ═══════════════════════════════════════════════════════ */
   #auth-screen {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
   }
   /* Left dark panel */
@@ -513,7 +543,7 @@
   }
   .auth-hero-tag {
     display: inline-block;
-    font-size: .625rem;
+    font-size: .6875rem;
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -577,6 +607,7 @@
     font-size: 1.625rem;
     font-weight: 800;
     letter-spacing: -.035em;
+    line-height: 1.15;
     margin-bottom: .375rem;
   }
   .auth-form-sub {
@@ -596,10 +627,10 @@
     margin-right: 1.75rem;
     font-size: .875rem;
     font-weight: 600;
-    color: var(--g400);
+    color: var(--text-3);
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: all .15s;
+    transition: var(--t-controls);
     background: none;
     border-left: none;
     border-top: none;
@@ -628,12 +659,16 @@
     font-weight: 600;
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     white-space: nowrap;
     margin-left: .5rem;
   }
 
-  /* Demo hint */
+  /* Marca no celular: o painel preto com o nome do app some abaixo de 900px */
+  .auth-mobile-brand { display: none; }
+  .auth-mobile-name { font-size: 1.125rem; font-weight: 900; letter-spacing: -.03em; line-height: 1.2; }
+  .auth-mobile-tag { font-size: .8125rem; color: var(--text-3); }
+  .auth-mobile-brand .auth-brand-mark { border-color: var(--black); }
 
   /* ═══════════════════════════════════════════════════════
      APP LAYOUT
@@ -648,13 +683,15 @@
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     margin-bottom: .5rem;
   }
   .page-hd h2 {
     font-size: 1.875rem;
     font-weight: 900;
     letter-spacing: -.04em;
+    line-height: 1.1;
+    text-wrap: balance;
     color: var(--black);
   }
   .page-hd p {
@@ -728,7 +765,7 @@
     padding: .625rem .875rem .625rem 2.25rem;
     border: 1px solid var(--g200);
     border-radius: var(--r-md);
-    font-size: .875rem;
+    font-size: 1rem;
     color: var(--black);
     background: var(--g50);
     outline: none;
@@ -745,7 +782,7 @@
     padding: .625rem .875rem;
     border: 1px solid var(--g200);
     border-radius: var(--r-md);
-    font-size: .875rem;
+    font-size: 1rem;
     color: var(--g700);
     background: var(--g50);
     cursor: pointer;
@@ -756,7 +793,7 @@
   .filter-select:focus { border-color: var(--black); }
   .results-label {
     font-size: .8125rem;
-    color: var(--g400);
+    color: var(--text-3);
     margin-bottom: 1.25rem;
     letter-spacing: .01em;
   }
@@ -765,7 +802,9 @@
   /* ─── VENDOR CARDS GRID ──────────────────────────────── */
   .vendors-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    /* auto-fit (e nao auto-fill): com poucos prestadores, os cards ocupam a largura
+       em vez de deixar colunas cinzas vazias ao lado */
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
     gap: 1px;
     background: var(--g200);
     border: 1px solid var(--g200);
@@ -780,7 +819,6 @@
     gap: 1rem;
     transition: background .15s;
   }
-  .vendor-card:hover { background: var(--g50); }
 
   .vc-top { display: flex; gap: .875rem; align-items: flex-start; }
   .vc-emoji {
@@ -829,7 +867,7 @@
   .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    color: var(--g400);
+    color: var(--text-3);
     background: var(--white);
     border: 1px solid var(--g200);
     border-radius: var(--r-lg);
@@ -864,13 +902,12 @@
     padding: 1.5rem;
     transition: background .15s;
   }
-  .stat-block:hover { background: var(--g50); }
   .stat-eyebrow {
     font-size: .6875rem;
     font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     margin-bottom: .5rem;
     display: flex;
     align-items: center;
@@ -893,11 +930,11 @@
   thead th {
     padding: .625rem 1rem;
     text-align: left;
-    font-size: .625rem;
+    font-size: .6875rem;
     font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     background: var(--g50);
     border-bottom: 1px solid var(--g200);
     white-space: nowrap;
@@ -909,7 +946,7 @@
     font-size: .8125rem;
   }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: var(--g50); }
+  @media (hover: hover) { tbody tr:hover td { background: var(--g50); } }
   td strong { color: var(--black); font-weight: 600; }
 
   /* ─── VENDOR PROFILE (view) ──────────────────────────── */
@@ -941,6 +978,7 @@
     font-size: 1.625rem;
     font-weight: 900;
     letter-spacing: -.04em;
+    line-height: 1.15;
   }
   .profile-banner-desc {
     font-size: .875rem;
@@ -956,7 +994,7 @@
     font-weight: 600;
     letter-spacing: .07em;
     text-transform: uppercase;
-    color: var(--g500);
+    color: var(--g400);
     border: 1px solid var(--g700);
     border-radius: 20px;
     padding: 4px 12px;
@@ -987,7 +1025,7 @@
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     margin-bottom: .2rem;
   }
   .profile-row-value { font-size: .9375rem; color: var(--black); font-weight: 500; }
@@ -1001,7 +1039,7 @@
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--g400);
+    color: var(--text-3);
     margin-bottom: 1rem;
   }
   .preview-strip::before, .preview-strip::after {
@@ -1047,21 +1085,35 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all .15s;
+    transition: var(--t-controls);
   }
-  .modal-close:hover { background: var(--g200); color: var(--black); }
+  @media (hover: hover) { .modal-close:hover { background: var(--g200); color: var(--black); } }
 
   /* ─── RESPONSIVE ─────────────────────────────────────── */
   @media (max-width: 900px) {
     .auth-panel-left { display: none; }
-    .auth-panel-right { background: var(--g100); }
+    .auth-panel-right { background: var(--g100); flex-direction: column; }
+    .auth-mobile-brand {
+      display: flex; align-items: center; gap: .75rem;
+      width: 100%; max-width: 380px; margin-bottom: 1.25rem;
+    }
     .auth-form-box { background: var(--white); border: 1px solid var(--g200); border-radius: var(--r-lg); padding: 2rem; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .admin-grid { grid-template-columns: 1fr; }
     .vendors-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 600px) {
-    .stats-grid { grid-template-columns: 1fr; }
+    /* 2x2 em vez de 4 blocos empilhados de 110px cada */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-block { padding: 1.125rem; }
+    .stat-value { font-size: 1.75rem; }
+    .auth-panel-right { padding: 1.5rem 1rem; }
+    .auth-form-box { padding: 1.5rem; }
+    #toast-container {
+      left: 1rem; right: 1rem;
+      bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    }
+    .toast { max-width: none; }
     .main { padding: 1rem; }
     .navbar { padding: 0 1rem; }
     .form-row { grid-template-columns: 1fr; }
@@ -1071,12 +1123,44 @@
     .profile-banner { min-height: unset; }
     .profile-banner::before { display: none; }
   }
+  /* A barra transbordava: o botao Sair ficava cortado para fora da tela */
+  @media (max-width: 480px) {
+    #nav-name, .nav-role-pill { display: none; }
+    .nav-logo { font-size: 1rem; }
+  }
+
+  /* ─── ACESSIBILIDADE ─────────────────────────────────── */
+  /* Alvos de toque de pelo menos 44px em telas de toque */
+  @media (pointer: coarse) {
+    .btn, .btn-sm, .btn-xs, .pdf-dl-btn, .btn-nav-logout, .auth-tab { min-height: 44px; }
+    #announce { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    #announce-close, .modal-close {
+      min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
+    }
+  }
+  /* Movimento reduzido: troca deslizes por esmaecimentos e tira o "afundar" do toque */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .toast, .auth-form-box, .modal { animation-name: fadeIn; }
+    .toast.out { animation-name: fadeOnly; }
+    .btn:active, .pdf-dl-btn:active, .btn-nav-logout:active,
+    .modal-close:active { transform: none; }
+  }
+  @keyframes fadeOnly { to { opacity: 0; } }
+  @media (prefers-reduced-transparency: reduce) {
+    .navbar { background: var(--white); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  @media (prefers-contrast: more) {
+    :root { --text-3: #404040; --placeholder: #595959; --g200: #a3a3a3; }
+    .navbar { background: var(--white); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
   </style>
 </head>
 <body>
 
 <!-- ── TOAST CONTAINER ── -->
-<div id="toast-container"></div>
+<div id="toast-container" role="status" aria-live="polite"></div>
 
 <!-- ════════════════════════════════════════════════════════
      AUTH SCREEN
@@ -1105,6 +1189,13 @@
 
   <!-- Right panel -->
   <div class="auth-panel-right">
+    <div class="auth-mobile-brand">
+      <div class="auth-brand-mark">🏪</div>
+      <div>
+        <div class="auth-mobile-name">CondoMarket</div>
+        <div class="auth-mobile-tag">O mercado do seu condomínio</div>
+      </div>
+    </div>
     <div class="auth-form-box">
 
       <div class="auth-tabs">
@@ -1116,13 +1207,13 @@
       <div id="login-pane">
         <div id="login-alert"></div>
         <div class="form-group">
-          <label class="form-label">Telefone</label>
-          <input class="form-input" id="l-tel" type="tel" placeholder="Ex: 11987654321" maxlength="20"
+          <label class="form-label" for="l-tel">Telefone</label>
+          <input class="form-input" id="l-tel" type="tel" autocomplete="tel" placeholder="Ex: 11987654321" maxlength="20"
             onkeydown="if(event.key==='Enter')doLogin()" />
         </div>
         <div class="form-group">
-          <label class="form-label">Senha</label>
-          <input class="form-input" id="l-pwd" type="password" placeholder="••••••••"
+          <label class="form-label" for="l-pwd">Senha</label>
+          <input class="form-input" id="l-pwd" type="password" autocomplete="current-password" placeholder="••••••••"
             onkeydown="if(event.key==='Enter')doLogin()" />
         </div>
         <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Entrar na conta</button>
@@ -1143,8 +1234,8 @@
           </p>
           <div id="reg1-alert"></div>
           <div class="form-group">
-            <label class="form-label">Código do Condomínio</label>
-            <input class="form-input" id="r-token" type="text" placeholder="Ex: RECANTO2026"
+            <label class="form-label" for="r-token">Código do Condomínio</label>
+            <input class="form-input" id="r-token" autocapitalize="characters" autocomplete="off" type="text" placeholder="Ex: RECANTO2026"
               style="text-transform:uppercase;letter-spacing:.06em"
               onkeydown="if(event.key==='Enter')validateToken()" />
             <p class="form-hint">Solicite ao administrador do seu condomínio</p>
@@ -1164,24 +1255,24 @@
             ✓ Condomínio validado
           </div>
           <div class="form-group">
-            <label class="form-label">Nome completo</label>
-            <input class="form-input" id="r-nome" type="text" placeholder="Seu nome completo" />
+            <label class="form-label" for="r-nome">Nome completo</label>
+            <input class="form-input" id="r-nome" type="text" autocomplete="name" placeholder="Seu nome completo" />
           </div>
           <div class="form-group">
-            <label class="form-label">Telefone</label>
-            <input class="form-input" id="r-tel" type="tel" placeholder="Ex: 11987654321" />
+            <label class="form-label" for="r-tel">Telefone</label>
+            <input class="form-input" id="r-tel" type="tel" autocomplete="tel" placeholder="Ex: 11987654321" />
           </div>
           <div class="form-group">
-            <label class="form-label">Senha</label>
-            <input class="form-input" id="r-pwd" type="password" placeholder="Mínimo 4 caracteres" />
+            <label class="form-label" for="r-pwd">Senha</label>
+            <input class="form-input" id="r-pwd" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Bloco</label>
+              <label class="form-label" for="r-bloco">Bloco</label>
               <input class="form-input" id="r-bloco" type="text" placeholder="A" />
             </div>
             <div class="form-group">
-              <label class="form-label">Apartamento</label>
+              <label class="form-label" for="r-apto">Apartamento</label>
               <input class="form-input" id="r-apto" type="text" placeholder="101" />
             </div>
           </div>
@@ -1190,7 +1281,7 @@
             Quero anunciar como prestador de serviço
           </label>
           <div style="display:flex;gap:.625rem">
-            <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem" onclick="backStep1()">←</button>
+            <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem" onclick="backStep1()" aria-label="Voltar">←</button>
             <button class="btn btn-primary" style="flex:1" id="btn-register" onclick="doRegister()">Criar conta</button>
           </div>
         </div>
@@ -1208,7 +1299,7 @@
   <!-- Announcement bar -->
   <div id="announce">
     Marketplace exclusivo para moradores do condomínio — dados privados e protegidos.
-    <button id="announce-close" onclick="document.getElementById('announce').remove()">✕</button>
+    <button id="announce-close" aria-label="Fechar aviso" onclick="document.getElementById('announce').remove()">✕</button>
   </div>
 
   <!-- Navbar -->
@@ -1241,14 +1332,38 @@
 // ─── STATE ───────────────────────────────────────────────
 const S = { token: null, user: null, condoToken: null, condoName: null, _vendors: [] };
 
+// ─── SEGURANCA: escape de HTML ───────────────────────────
+// Tudo que vem do servidor e foi digitado por usuarios (nome do negocio, descricao,
+// nomes...) passa por aqui antes de entrar num innerHTML. Sem isto, um prestador
+// podia gravar <img onerror=...> no nome e executar codigo no navegador de todos
+// os moradores e do admin.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Depois de recarregar a pagina a sessao volta pelo cookie httpOnly e S.token fica
+// vazio; mandar "Bearer null" faria a API recusar o pedido mesmo com o cookie valido.
+function authHeaders() {
+  return S.token ? { Authorization: 'Bearer ' + S.token } : {};
+}
+
+// FastAPI devolve detail como texto (erros do app) ou como lista (validacao, 422).
+// Antes, a lista virava "[object Object]" na tela.
+function mensagemDeErro(d, status) {
+  if (typeof d.detail === 'string') return d.detail;
+  if (Array.isArray(d.detail) && d.detail[0] && d.detail[0].msg)
+    return d.detail[0].msg.replace(/^Value error, /, '');
+  return 'Erro ' + status;
+}
+
 // ─── API ─────────────────────────────────────────────────
 async function api(method, path, body) {
-  const h = { 'Content-Type': 'application/json' };
-  if (S.token) h['Authorization'] = 'Bearer ' + S.token;
+  const h = { 'Content-Type': 'application/json', ...authHeaders() };
   const r = await fetch(path, { method, headers: h, body: body ? JSON.stringify(body) : null });
   if (r.status === 204) return null;
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.detail || 'Erro ' + r.status);
+  if (!r.ok) throw new Error(mensagemDeErro(d, r.status));
   return d;
 }
 
@@ -1257,16 +1372,24 @@ function toast(type, msg) {
   const c = document.getElementById('toast-container');
   const d = document.createElement('div');
   d.className = 'toast ' + type;
-  const icons = { success: '✓', error: '✕', info: '·' };
-  d.innerHTML = `<span style="font-weight:700;font-size:1rem">${icons[type]||'·'}</span>${msg}`;
+  const icon = document.createElement('span');
+  icon.className = 'toast-icon';
+  icon.textContent = { success: '✓', error: '✕', info: '·' }[type] || '·';
+  d.append(icon, document.createTextNode(msg));   // texto puro: nunca interpreta HTML
+  const fechar = () => {
+    if (d.classList.contains('out')) return;
+    d.classList.add('out');
+    setTimeout(() => d.remove(), 250);
+  };
+  d.addEventListener('click', fechar);            // um toque dispensa na hora
   c.appendChild(d);
-  setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 280); }, 3500);
+  setTimeout(fechar, 3500);
 }
 
 // ─── ALERT HELPERS ────────────────────────────────────────
 function setAlert(id, type, msg) {
   document.getElementById(id).innerHTML = msg
-    ? `<div class="alert alert-${type}"><span class="alert-icon">${type==='error'?'⚠':'ℹ'}</span>${msg}</div>` : '';
+    ? `<div class="alert alert-${type}"><span class="alert-icon">${type==='error'?'⚠':'ℹ'}</span>${esc(msg)}</div>` : '';
 }
 
 // ─── LOADING BUTTON ───────────────────────────────────────
@@ -1311,7 +1434,7 @@ async function validateToken() {
     if (d.valid) {
       S.condoToken = t; S.condoName = d.condominio_nome;
       document.getElementById('reg-condo-badge').innerHTML =
-        `✓ <strong>${d.condominio_nome}</strong> — condomínio confirmado`;
+        `✓ <strong>${esc(d.condominio_nome)}</strong> — condomínio confirmado`;
       document.getElementById('reg-s1').classList.add('hidden');
       document.getElementById('reg-s2').classList.remove('hidden');
     } else {
@@ -1337,7 +1460,7 @@ async function doRegister() {
   const apto  = document.getElementById('r-apto').value.trim();
   const vend  = document.getElementById('r-vendedor').checked;
   if (!nome||!tel||!pwd||!bloco||!apto) { setAlert('reg2-alert','warning','Preencha todos os campos.'); return; }
-  if (pwd.length < 4) { setAlert('reg2-alert','warning','Senha muito curta (mín. 4 caracteres).'); return; }
+  if (pwd.length < 8) { setAlert('reg2-alert','warning','Senha muito curta (mín. 8 caracteres).'); return; }
   setBtnLoad('btn-register', true);
   try {
     const reg = await api('POST', '/api/auth/register', {
@@ -1362,6 +1485,7 @@ function enterApp() {
   const u = S.user;
   const ini = u.nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   document.getElementById('nav-av').textContent = ini;
+  document.getElementById('nav-av').title = u.nome;   // no celular o nome fica oculto
   document.getElementById('nav-name').textContent = u.nome.split(' ')[0];
   document.getElementById('nav-role').textContent = u.is_admin ? 'Admin' : u.is_vendedor ? 'Prestador' : 'Morador';
   if (u.is_admin) viewAdmin();
@@ -1389,7 +1513,7 @@ function emoji(cat) {
   if (c.includes('pet')||c.includes('tosa')) return '🐾';
   if (c.includes('aula')||c.includes('educa')) return '📚';
   if (c.includes('limpeza')||c.includes('diarista')||c.includes('faxina')) return '🧹';
-  if (c.includes('alimentaç')) return '🍽️';
+  if (c.includes('alimenta')) return '🍽️';
   return '🛍️';
 }
 function isServico(cat) {
@@ -1432,7 +1556,7 @@ async function viewMarket() {
     cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
     renderCards(S._vendors);
   } catch(e) {
-    document.getElementById('mkt-body').innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    document.getElementById('mkt-body').innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
   }
 }
 
@@ -1473,24 +1597,24 @@ function renderCards(vendors) {
               <div class="vc-badge-row">
                 <span class="badge ${svc ? 'badge-blue' : 'badge-amber'}">${svc ? 'Serviço' : 'Produto'}</span>
               </div>
-              <div class="vc-name" title="${v.nome_negocio}">${v.nome_negocio}</div>
+              <div class="vc-name" title="${esc(v.nome_negocio)}">${esc(v.nome_negocio)}</div>
               <div class="vc-cat">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                ${v.categoria || 'Sem categoria'}
+                ${esc(v.categoria || 'Sem categoria')}
               </div>
             </div>
           </div>
-          <p class="vc-desc">${v.descricao || '<em style="color:var(--g400)">Sem descrição.</em>'}</p>
+          <p class="vc-desc">${v.descricao ? esc(v.descricao) : '<em style="color:var(--text-3)">Sem descrição.</em>'}</p>
           <div class="vc-actions" style="display:flex;flex-direction:column;gap:.5rem">
             ${v.whatsapp
               ? `<a href="${wappUrl}" target="_blank" class="btn btn-wapp">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                   Chamar no WhatsApp
                 </a>`
-              : `<span style="font-size:.75rem;color:var(--g400)">Sem contato cadastrado</span>`
+              : `<span style="font-size:.75rem;color:var(--text-3)">Sem contato cadastrado</span>`
             }
             ${v.tem_pdf
-              ? `<button onclick="downloadVendorPdf(${v.id},'${v.nome_negocio.replace(/'/g,'')}')"
+              ? `<button onclick="downloadVendorPdf(${Number(v.id)})"
                     class="btn btn-ghost btn-sm" style="font-size:.8rem;justify-content:center;width:100%">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Ver Cardápio / Catálogo PDF
@@ -1514,32 +1638,33 @@ async function viewVendor() {
     if (!p) renderVendorCreate();
     else renderVendorShow(p);
   } catch(e) {
-    m.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    m.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
   }
 }
 
 const CATS = ['Alimentação','Serviços Gerais','Beleza','Pet','Aulas/Educação','Outros'];
 
 function renderVendorShow(p) {
+  S._perfil = p;   // Editar/Cancelar leem daqui, em vez de serializar o perfil num onclick
   const m = document.getElementById('main');
   m.innerHTML = `
     <div class="page-hd">
       <div class="page-hd-eyebrow">Painel do Prestador</div>
       <h2>Seu perfil</h2>
-      <p>Visible para todos os moradores do condomínio</p>
+      <p>Visível para todos os moradores do condomínio</p>
     </div>
 
     <div class="profile-banner" data-emoji="${emoji(p.categoria)}">
       <div>
-        <div class="profile-banner-title">${p.nome_negocio}</div>
-        <div class="profile-banner-desc">${p.descricao || 'Sem descrição.'}</div>
+        <div class="profile-banner-title">${esc(p.nome_negocio)}</div>
+        <div class="profile-banner-desc">${esc(p.descricao || 'Sem descrição.')}</div>
         <div class="profile-banner-cat">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          ${p.categoria}
+          ${esc(p.categoria)}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.1);color:var(--white);border-color:rgba(255,255,255,.2);flex-shrink:0;align-self:flex-start"
-        onclick='renderVendorEdit(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+        onclick="renderVendorEdit(S._perfil)">
         Editar perfil
       </button>
     </div>
@@ -1550,11 +1675,11 @@ function renderVendorShow(p) {
       </div>
       <div class="profile-row">
         <div class="profile-row-icon">🏪</div>
-        <div><div class="profile-row-label">Nome do Negócio</div><div class="profile-row-value">${p.nome_negocio}</div></div>
+        <div><div class="profile-row-label">Nome do Negócio</div><div class="profile-row-value">${esc(p.nome_negocio)}</div></div>
       </div>
       <div class="profile-row">
         <div class="profile-row-icon">🏷</div>
-        <div><div class="profile-row-label">Categoria</div><div class="profile-row-value">${p.categoria}</div></div>
+        <div><div class="profile-row-label">Categoria</div><div class="profile-row-value">${esc(p.categoria)}</div></div>
       </div>
       <div class="profile-row">
         <div class="profile-row-icon">📱</div>
@@ -1562,13 +1687,13 @@ function renderVendorShow(p) {
           <div class="profile-row-label">WhatsApp</div>
           <div class="profile-row-value">
             <a href="https://wa.me/55${p.whatsapp.replace(/\D/g,'')}" target="_blank"
-               style="color:var(--wapp);font-weight:600">${p.whatsapp}</a>
+               style="color:var(--wapp);font-weight:600">${esc(p.whatsapp)}</a>
           </div>
         </div>
       </div>
       <div class="profile-row">
         <div class="profile-row-icon">📝</div>
-        <div><div class="profile-row-label">Descrição</div><div class="profile-row-value">${p.descricao||'—'}</div></div>
+        <div><div class="profile-row-label">Descrição</div><div class="profile-row-value">${esc(p.descricao||'—')}</div></div>
       </div>
       <div class="profile-row">
         <div class="profile-row-icon">📄</div>
@@ -1580,7 +1705,7 @@ function renderVendorShow(p) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Baixar / Visualizar PDF
                 </a>`
-              : `<span style="font-size:.8125rem;color:var(--g400)">Nenhum PDF cadastrado</span>`}
+              : `<span style="font-size:.8125rem;color:var(--text-3)">Nenhum PDF cadastrado</span>`}
           </div>
         </div>
       </div>
@@ -1596,11 +1721,11 @@ function renderVendorShow(p) {
               <div class="vc-emoji">${emoji(p.categoria)}</div>
               <div class="vc-meta">
                 <div class="vc-badge-row"><span class="badge ${svc?'badge-blue':'badge-amber'}">${svc?'Serviço':'Produto'}</span></div>
-                <div class="vc-name">${p.nome_negocio}</div>
-                <div class="vc-cat">${p.categoria}</div>
+                <div class="vc-name">${esc(p.nome_negocio)}</div>
+                <div class="vc-cat">${esc(p.categoria)}</div>
               </div>
             </div>
-            <p class="vc-desc">${p.descricao||'—'}</p>
+            <p class="vc-desc">${esc(p.descricao||'—')}</p>
             <div class="vc-actions"><div class="btn btn-wapp" style="cursor:default">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
               Chamar no WhatsApp</div></div>
@@ -1612,30 +1737,30 @@ function renderVendorShow(p) {
 }
 
 function vendorFormHTML(p) {
-  const v = k => p && p[k] ? p[k] : '';
+  const v = k => esc(p && p[k] ? p[k] : '');
   const hasPdf = p && p.tem_pdf;
   return `
     <div class="form-group">
-      <label class="form-label">Nome do Negócio *</label>
+      <label class="form-label" for="vf-nome">Nome do Negócio *</label>
       <input class="form-input" id="vf-nome" value="${v('nome_negocio')}" placeholder="Ex: Doces da Ana" />
     </div>
     <div class="form-group">
       <label class="form-label">Categoria *</label>
       <select class="form-select" id="vf-cat">
-        ${CATS.map(c=>`<option value="${c}" ${v('categoria')===c?'selected':''}>${c}</option>`).join('')}
+        ${CATS.map(c=>`<option value="${c}" ${(p && p.categoria)===c?'selected':''}>${c}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">WhatsApp *</label>
-      <input class="form-input" id="vf-wapp" value="${v('whatsapp')}" placeholder="Somente números: 11999990000" />
+      <label class="form-label" for="vf-wapp">WhatsApp *</label>
+      <input class="form-input" id="vf-wapp" type="tel" inputmode="numeric" value="${v('whatsapp')}" placeholder="Somente números: 11999990000" />
     </div>
     <div class="form-group">
-      <label class="form-label">Descrição <span style="font-weight:400;color:var(--g400)">(máx. 300 caracteres)</span></label>
+      <label class="form-label">Descrição <span style="font-weight:400;color:var(--text-3)">(máx. 300 caracteres)</span></label>
       <textarea class="form-textarea" id="vf-desc" maxlength="300" placeholder="Descreva seus produtos ou serviços…">${v('descricao')}</textarea>
       <div class="char-count"><span id="vf-cc">0</span> / 300</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Cardápio / Catálogo em PDF <span style="font-weight:400;color:var(--g400)">(opcional · máx. 5 MB)</span></label>
+      <label class="form-label">Cardápio / Catálogo em PDF <span style="font-weight:400;color:var(--text-3)">(opcional · máx. 4 MB)</span></label>
       ${hasPdf ? `
       <div class="pdf-current" id="pdf-current-row">
         <div class="pdf-current-left">
@@ -1693,10 +1818,11 @@ function onPdfSelect(input) {
 async function removePdf() {
   if (!confirm('Remover o PDF cadastrado?')) return;
   try {
-    await fetch('/api/vendor/profile/pdf', {
+    const r = await fetch('/api/vendor/profile/pdf', {
       method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + S.token }
+      headers: authHeaders()
     });
+    if (!r.ok) throw new Error('HTTP ' + r.status);   // antes dizia "removido" mesmo se falhasse
     toast('info', 'PDF removido.');
     const row = document.getElementById('pdf-current-row');
     if (row) row.remove();
@@ -1707,10 +1833,12 @@ async function removePdf() {
   }
 }
 
-async function downloadVendorPdf(vendorId, nomeNegocio) {
+async function downloadVendorPdf(vendorId) {
+  const vendor = S._vendors.find(x => x.id === vendorId);
+  const nomeNegocio = vendor ? vendor.nome_negocio : 'prestador';
   try {
     const r = await fetch(`/api/marketplace/vendor/${vendorId}/pdf`, {
-      headers: { Authorization: 'Bearer ' + S.token }
+      headers: authHeaders()
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
@@ -1721,7 +1849,7 @@ async function downloadVendorPdf(vendorId, nomeNegocio) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cardapio_${nomeNegocio.replace(/\s+/g,'_')}.pdf`;
+    a.download = `cardapio_${nomeNegocio.replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,'_')}.pdf`;
     a.target = '_blank';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
@@ -1735,15 +1863,15 @@ async function uploadPdfIfSelected() {
   const file = input?.files?.[0];
   if (!file) return;
   const fd = new FormData();
-  fd.append('pdf', file);
+  fd.append('file', file);   // a API espera o campo "file"; com "pdf" todo upload dava 422
   const r = await fetch('/api/vendor/profile/pdf', {
     method: 'POST',
-    headers: { Authorization: 'Bearer ' + S.token },
+    headers: authHeaders(),
     body: fd
   });
   if (!r.ok) {
     const d = await r.json().catch(() => ({}));
-    throw new Error(d.detail || 'Erro ao enviar PDF');
+    throw new Error(mensagemDeErro(d, r.status));
   }
 }
 
@@ -1776,7 +1904,7 @@ function renderVendorEdit(p) {
       ${vendorFormHTML(p)}
       <div style="display:flex;gap:.625rem">
         <button class="btn btn-ghost" style="flex:.35;padding:.75rem .5rem"
-          onclick='renderVendorShow(${JSON.stringify(p).replace(/'/g,"&#39;")})'>Cancelar</button>
+          onclick="renderVendorShow(S._perfil)">Cancelar</button>
         <button class="btn btn-primary" style="flex:1" id="btn-sv" onclick="saveVendor(true)">Salvar alterações</button>
       </div>
     </div>`;
@@ -1813,7 +1941,7 @@ async function saveVendor(isEdit) {
     const p2 = await api('GET', '/api/vendor/profile');
     renderVendorShow(p2);
   } catch(e) {
-    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
     setBtnLoad('btn-sv', false, isEdit ? 'Salvar alterações' : 'Publicar perfil');
   }
 }
@@ -1832,7 +1960,7 @@ async function viewAdmin() {
     ]);
     renderAdminContent(stats, condosResp.items ?? condosResp, usersResp.items ?? usersResp);
   } catch(e) {
-    m.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    m.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
   }
 }
 
@@ -1939,7 +2067,7 @@ function renderAdminContent(stats, condos, users) {
           <input id="adm-us" placeholder="Buscar por nome ou telefone…" oninput="filterUsers()" />
         </div>
         <input class="form-input" id="adm-ub" placeholder="Filtrar bloco…"
-          style="width:140px;padding:.55rem .875rem;font-size:.8125rem" oninput="filterUsers()" />
+          style="width:140px;padding:.55rem .875rem" oninput="filterUsers()" />
       </div>
       <div class="table-wrap">
         <table>
@@ -1952,17 +2080,17 @@ function renderAdminContent(stats, condos, users) {
 }
 
 function condoRows(list) {
-  if (!list.length) return `<tr><td colspan="3" style="text-align:center;color:var(--g400);padding:2rem">Nenhum condomínio.</td></tr>`;
+  if (!list.length) return `<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum condomínio.</td></tr>`;
   return list.map(c => `
     <tr>
-      <td><span class="badge badge-outline">${c.id}</span></td>
-      <td><strong>${c.nome}</strong></td>
-      <td><span class="badge badge-black">${c.token_acesso}</span></td>
+      <td><span class="badge badge-outline">${esc(c.id)}</span></td>
+      <td><strong>${esc(c.nome)}</strong></td>
+      <td><span class="badge badge-black">${esc(c.token_acesso)}</span></td>
     </tr>`).join('');
 }
 
 function userRows(list) {
-  if (!list.length) return `<tr><td colspan="6" style="text-align:center;color:var(--g400);padding:2rem">Nenhum usuário.</td></tr>`;
+  if (!list.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum usuário.</td></tr>`;
   return list.map(u => {
     const badge = u.is_admin
       ? `<span class="badge badge-black">Admin</span>`
@@ -1970,11 +2098,11 @@ function userRows(list) {
         ? `<span class="badge badge-amber">Prestador</span>`
         : `<span class="badge badge-blue">Morador</span>`;
     return `<tr>
-      <td><strong>${u.nome}</strong></td>
-      <td style="color:var(--g500)">${u.telefone}</td>
-      <td>${u.bloco||'—'}</td>
-      <td>${u.apartamento||'—'}</td>
-      <td>${u.condominio}</td>
+      <td><strong>${esc(u.nome)}</strong></td>
+      <td style="color:var(--g500)">${esc(u.telefone)}</td>
+      <td>${esc(u.bloco||'—')}</td>
+      <td>${esc(u.apartamento||'—')}</td>
+      <td>${esc(u.condominio)}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
@@ -2008,7 +2136,7 @@ async function createCondo() {
     toast('success', `Condomínio "${nome}" cadastrado!`);
     viewAdmin();
   } catch(e) {
-    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
     setBtnLoad('btn-cc', false, 'Cadastrar condomínio');
   }
 }
@@ -2027,11 +2155,11 @@ function renderAdminEditProfile() {
       <div id="adm-prof-alert"></div>
       <div class="form-group">
         <label class="form-label">Nome</label>
-        <input class="form-input" id="adp-nome" value="${u.nome || ''}" />
+        <input class="form-input" id="adp-nome" value="${esc(u.nome)}" />
       </div>
       <div class="form-group">
         <label class="form-label">Telefone</label>
-        <input class="form-input" id="adp-tel" type="tel" value="${u.telefone || ''}" />
+        <input class="form-input" id="adp-tel" type="tel" value="${esc(u.telefone)}" />
       </div>
       <div class="divider">Alterar senha (opcional)</div>
       <div class="form-group">
@@ -2080,7 +2208,7 @@ async function saveAdminProfile() {
     toast('success', 'Acesso atualizado com sucesso!');
     viewAdmin();
   } catch(e) {
-    ae.innerHTML = `<div class="alert alert-error">⚠ ${e.message}</div>`;
+    ae.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
     setBtnLoad('btn-adp', false, 'Salvar alterações');
   }
 }

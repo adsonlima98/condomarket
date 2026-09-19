@@ -7,18 +7,20 @@ import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import FastAPI, Depends, Header, HTTPException, UploadFile, File, Request, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, JSONResponse
 from pydantic import BaseModel, field_validator
+from sqlalchemy.orm import undefer
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from database import (
     SessionLocal, init_db,
-    Condominio, Usuario, PerfilComercial,
+    Condominio, Usuario, PerfilComercial, CardapioPdf,
     buscar_vendedores_por_condominio,
     hash_senha, verificar_senha,
 )
@@ -39,16 +41,13 @@ if not SECRET_KEY:
 
 ALGORITHM = "HS256"
 TOKEN_TTL_DAYS = 1
-PDF_MAX_SIZE_BYTES = 5 * 1024 * 1024
+# A Vercel limita o corpo de requisicao e de resposta de uma funcao a 4,5 MB.
+# O upload e o download do PDF passam inteiros pela funcao, entao o teto fica abaixo.
+PDF_MAX_SIZE_BYTES = 4 * 1024 * 1024
 PASSWORD_MIN_LEN = int(os.environ.get("PASSWORD_MIN_LEN", "8"))
 COOKIE_NAME = "cm_auth"
 IS_TESTING = os.environ.get("TESTING") == "true"
-
-# Em producao (Fly.io) os PDFs ficam no volume persistente /data/pdfs
-# Em desenvolvimento ficam na pasta local pdfs/
-_data_dir = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent)))
-PDF_DIR = _data_dir / "pdfs"
-PDF_DIR.mkdir(parents=True, exist_ok=True)
+INDEX_HTML = Path(__file__).parent / "index.html"
 
 # ── Rate limiter ──────────────────────────────────────────────────────────────
 if IS_TESTING:
@@ -442,6 +441,42 @@ def change_password(body: ChangePasswordBody, user_id: int = Depends(get_current
         session.close()
 
 
+# ── Cardapio em PDF (guardado no banco — a Vercel nao tem disco persistente) ──
+def _ids_com_pdf(session, usuario_ids) -> set:
+    """Quais destes usuarios tem cardapio. Uma consulta so, sem carregar os bytes."""
+    if not usuario_ids:
+        return set()
+    linhas = (session.query(CardapioPdf.usuario_id)
+              .filter(CardapioPdf.usuario_id.in_(usuario_ids)).all())
+    return {uid for (uid,) in linhas}
+
+
+def _tem_pdf(session, usuario_id: int) -> bool:
+    return bool(_ids_com_pdf(session, [usuario_id]))
+
+
+def _resposta_pdf(session, usuario_id: int, nome_padrao: str) -> Response:
+    pdf = (session.query(CardapioPdf)
+           .options(undefer(CardapioPdf.conteudo))
+           .filter_by(usuario_id=usuario_id).first())
+    if not pdf:
+        raise HTTPException(status_code=404, detail="PDF nao encontrado")
+    profile = session.query(PerfilComercial).filter_by(usuario_id=usuario_id).first()
+    nome = f"{profile.nome_negocio}.pdf" if profile else nome_padrao
+    # filename* (RFC 5987) aceita acentos no nome do negocio e neutraliza aspas e quebras de linha
+    return Response(
+        content=pdf.conteudo,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{quote(nome)}"},
+    )
+
+
+def _vendor_json(p, ids_com_pdf: set) -> dict:
+    return {"id": p.usuario_id, "nome_negocio": p.nome_negocio,
+            "descricao": p.descricao or "", "categoria": p.categoria,
+            "whatsapp": p.whatsapp, "tem_pdf": p.usuario_id in ids_com_pdf}
+
+
 # ── Marketplace ───────────────────────────────────────────────────────────────
 @app.get("/api/marketplace/categories")
 def list_categories(user_id: int = Depends(get_current_user_id)):
@@ -462,23 +497,12 @@ def list_vendors(user_id: int = Depends(get_current_user_id)):
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
         if u.is_admin:
             perfis = session.query(PerfilComercial).all()
-            result = []
-            for p in perfis:
-                pdf_path = PDF_DIR / f"{p.usuario_id}.pdf"
-                result.append({"id": p.usuario_id, "nome_negocio": p.nome_negocio,
-                    "descricao": p.descricao or "", "categoria": p.categoria,
-                    "whatsapp": p.whatsapp, "tem_pdf": pdf_path.exists()})
-            return result
-        if not u.condominio_id:
+        elif not u.condominio_id:
             return []
-        perfis = buscar_vendedores_por_condominio(u.condominio_id)
-        result = []
-        for p in perfis:
-            pdf_path = PDF_DIR / f"{p.usuario_id}.pdf"
-            result.append({"id": p.usuario_id, "nome_negocio": p.nome_negocio,
-                "descricao": p.descricao or "", "categoria": p.categoria,
-                "whatsapp": p.whatsapp, "tem_pdf": pdf_path.exists()})
-        return result
+        else:
+            perfis = buscar_vendedores_por_condominio(u.condominio_id)
+        com_pdf = _ids_com_pdf(session, [p.usuario_id for p in perfis])
+        return [_vendor_json(p, com_pdf) for p in perfis]
     finally:
         session.close()
 
@@ -493,12 +517,7 @@ def download_vendor_pdf(vendor_id: int, user_id: int = Depends(get_current_user_
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
         if not requester.is_admin and requester.condominio_id != vendor_user.condominio_id:
             raise HTTPException(status_code=403, detail="Acesso negado")
-        pdf_path = PDF_DIR / f"{vendor_id}.pdf"
-        if not pdf_path.exists():
-            raise HTTPException(status_code=404, detail="PDF nao encontrado")
-        profile = session.query(PerfilComercial).filter_by(usuario_id=vendor_id).first()
-        filename = f"{profile.nome_negocio}.pdf" if profile else "cardapio.pdf"
-        return FileResponse(str(pdf_path), media_type="application/pdf", filename=filename)
+        return _resposta_pdf(session, vendor_id, "cardapio.pdf")
     finally:
         session.close()
 
@@ -514,10 +533,9 @@ def get_vendor_profile(user_id: int = Depends(get_current_user_id)):
         profile = session.query(PerfilComercial).filter_by(usuario_id=user_id).first()
         if not profile:
             return Response(status_code=204)
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
         return {"nome_negocio": profile.nome_negocio, "descricao": profile.descricao or "",
                 "categoria": profile.categoria, "whatsapp": profile.whatsapp,
-                "tem_pdf": pdf_path.exists()}
+                "tem_pdf": _tem_pdf(session, user_id)}
     finally:
         session.close()
 
@@ -535,8 +553,8 @@ def create_vendor_profile(body: VendorProfileBody, user_id: int = Depends(get_cu
             descricao=body.descricao, categoria=body.categoria, whatsapp=body.whatsapp)
         session.add(profile)
         session.commit()
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
-        return {"message": "Perfil criado com sucesso", "ok": True, "tem_pdf": pdf_path.exists()}
+        return {"message": "Perfil criado com sucesso", "ok": True,
+                "tem_pdf": _tem_pdf(session, user_id)}
     finally:
         session.close()
 
@@ -559,8 +577,8 @@ def update_vendor_profile(body: VendorProfileBody, user_id: int = Depends(get_cu
                 descricao=body.descricao, categoria=body.categoria, whatsapp=body.whatsapp)
             session.add(profile)
         session.commit()
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
-        return {"message": "Perfil atualizado com sucesso", "ok": True, "tem_pdf": pdf_path.exists()}
+        return {"message": "Perfil atualizado com sucesso", "ok": True,
+                "tem_pdf": _tem_pdf(session, user_id)}
     finally:
         session.close()
 
@@ -576,9 +594,11 @@ async def upload_pdf(file: UploadFile = File(...), user_id: int = Depends(get_cu
             raise HTTPException(status_code=400, detail="Apenas arquivos PDF sao aceitos")
         contents = await file.read()
         if len(contents) > PDF_MAX_SIZE_BYTES:
-            raise HTTPException(status_code=400, detail="PDF excede o limite de 5 MB")
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
-        pdf_path.write_bytes(contents)
+            raise HTTPException(status_code=400, detail="PDF excede o limite de 4 MB")
+        # session.merge faz insert ou update pela chave primaria (usuario_id):
+        # um novo upload substitui o cardapio anterior
+        session.merge(CardapioPdf(usuario_id=user_id, conteudo=contents))
+        session.commit()
         return {"ok": True, "message": "PDF enviado com sucesso"}
     finally:
         session.close()
@@ -591,12 +611,7 @@ def download_own_pdf(user_id: int = Depends(get_current_user_id)):
         u = session.get(Usuario, user_id)
         if not u or not u.is_vendedor:
             raise HTTPException(status_code=403, detail="Acesso negado")
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
-        if not pdf_path.exists():
-            raise HTTPException(status_code=404, detail="PDF nao encontrado")
-        profile = session.query(PerfilComercial).filter_by(usuario_id=user_id).first()
-        filename = f"{profile.nome_negocio}.pdf" if profile else "meu_cardapio.pdf"
-        return FileResponse(str(pdf_path), media_type="application/pdf", filename=filename)
+        return _resposta_pdf(session, user_id, "meu_cardapio.pdf")
     finally:
         session.close()
 
@@ -608,9 +623,8 @@ def delete_pdf(user_id: int = Depends(get_current_user_id)):
         u = session.get(Usuario, user_id)
         if not u or not u.is_vendedor:
             raise HTTPException(status_code=403, detail="Acesso negado")
-        pdf_path = PDF_DIR / f"{user_id}.pdf"
-        if pdf_path.exists():
-            pdf_path.unlink()
+        session.query(CardapioPdf).filter_by(usuario_id=user_id).delete()
+        session.commit()
         return {"ok": True, "message": "PDF removido"}
     finally:
         session.close()
@@ -773,6 +787,7 @@ def delete_user(user_id: int, admin_id: int = Depends(require_admin)):
         perfil = session.query(PerfilComercial).filter_by(usuario_id=user_id).first()
         if perfil:
             session.delete(perfil)
+        session.query(CardapioPdf).filter_by(usuario_id=user_id).delete()
         session.delete(u)
         session.commit()
         return {"ok": True, "message": "Usuario removido com sucesso"}
@@ -781,15 +796,16 @@ def delete_user(user_id: int, admin_id: int = Depends(require_admin)):
 
 
 # ── SPA ───────────────────────────────────────────────────────────────────────
-# ── SPA ───────────────────────────────────────────────────────────────────────
+# O frontend inteiro e um unico index.html; qualquer rota que nao seja da API o devolve.
+# NUNCA servir arquivos pelo caminho pedido: a versao anterior fazia isso e expunha
+# o codigo-fonte, o .env (SECRET_KEY, ADMIN_PASSWORD) e o banco SQLite.
 @app.get("/")
 def serve_index():
-    return FileResponse(str(Path(__file__).parent / "index.html"))
+    return FileResponse(str(INDEX_HTML))
 
 
 @app.get("/{full_path:path}")
 def serve_spa(full_path: str):
-    static = Path(__file__).parent / full_path
-    if static.exists() and static.is_file():
-        return FileResponse(str(static))
-    return FileResponse(str(Path(__file__).parent / "index.html"))
+    if full_path == "api" or full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Rota nao encontrada")
+    return FileResponse(str(INDEX_HTML))

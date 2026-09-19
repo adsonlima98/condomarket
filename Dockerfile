@@ -20,8 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o codigo da aplicacao
 COPY . .
 
-# Cria diretorios necessarios
-RUN mkdir -p /data/pdfs
 
 # Remove arquivos desnecessarios em producao
 RUN rm -f marketplace.db test_marketplace.db* \

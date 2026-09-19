@@ -1,0 +1,28 @@
+# Segredos e dados locais — nunca enviar
+.env
+*.env
+*.db
+*.db-journal
+pdfs/
+uploads/
+
+# Frontend Streamlit legado (nao roda na Vercel)
+app.py
+auth.py
+admin_view.py
+cliente_view.py
+vendedor_view.py
+
+# Scripts de uso local
+run.py
+setup.py
+migrar_senhas.py
+
+# Testes, caches e arquivos de outras plataformas
+tests/
+.pytest_cache/
+pytest-cache-files-*/
+__pycache__/
+Dockerfile
+.dockerignore
+AGENTS.md/

@@ -4,7 +4,7 @@ Execute com: pytest tests/ -v
 """
 import os
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
@@ -24,6 +24,15 @@ _TEST_ENGINE = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+
+# SQLite ignora chaves estrangeiras por padrao; o PostgreSQL de producao nao.
+# Ligar aqui faz os testes pegarem violacoes de FK antes do deploy.
+@event.listens_for(_TEST_ENGINE, "connect")
+def _ligar_foreign_keys(dbapi_conn, _record):
+    dbapi_conn.execute("PRAGMA foreign_keys=ON")
+
+
 _db.engine = _TEST_ENGINE
 _db.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_TEST_ENGINE)
 
@@ -438,3 +447,127 @@ class TestLogout:
         resp = client.post("/api/auth/logout")
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Cardapio em PDF (guardado no banco — a Vercel nao tem disco persistente)
+# ---------------------------------------------------------------------------
+
+class TestCardapioPdf:
+
+    PDF = b"%PDF-1.4\n% cardapio de teste\n"
+
+    def _upload(self, token, conteudo=None, tipo="application/pdf"):
+        arquivo = conteudo if conteudo is not None else self.PDF
+        return client.post(
+            "/api/vendor/profile/pdf",
+            files={"file": ("cardapio.pdf", arquivo, tipo)},
+            headers=auth(token),
+        )
+
+    def test_upload_e_download_do_proprio_pdf(self):
+        token = get_token("11999999994", "vendedor1")
+        assert self._upload(token).status_code == 200
+        resp = client.get("/api/vendor/profile/pdf", headers=auth(token))
+        assert resp.status_code == 200
+        assert resp.content == self.PDF
+        assert resp.headers["content-type"] == "application/pdf"
+
+    def test_tem_pdf_reflete_upload_e_remocao(self):
+        token = get_token("11999999994", "vendedor1")
+        assert client.get("/api/vendor/profile", headers=auth(token)).json()["tem_pdf"] is False
+        self._upload(token)
+        assert client.get("/api/vendor/profile", headers=auth(token)).json()["tem_pdf"] is True
+        assert client.delete("/api/vendor/profile/pdf", headers=auth(token)).status_code == 200
+        assert client.get("/api/vendor/profile", headers=auth(token)).json()["tem_pdf"] is False
+
+    def test_morador_do_mesmo_condominio_baixa_pdf_do_prestador(self):
+        self._upload(get_token("11999999994", "vendedor1"))
+        tm = get_token("11999999991", "morador1")
+        vendors = client.get("/api/marketplace/vendors", headers=auth(tm)).json()
+        ana = next(v for v in vendors if v["nome_negocio"] == "Doces da Ana")
+        assert ana["tem_pdf"] is True
+        resp = client.get(f"/api/marketplace/vendor/{ana['id']}/pdf", headers=auth(tm))
+        assert resp.status_code == 200
+        assert resp.content == self.PDF
+
+    def test_prestador_sem_pdf_aparece_com_tem_pdf_falso(self):
+        tm = get_token("11999999991", "morador1")
+        vendors = client.get("/api/marketplace/vendors", headers=auth(tm)).json()
+        assert vendors and all(v["tem_pdf"] is False for v in vendors)
+
+    def test_novo_upload_substitui_o_anterior(self):
+        token = get_token("11999999994", "vendedor1")
+        self._upload(token, b"%PDF-1.4 primeiro")
+        self._upload(token, b"%PDF-1.4 segundo")
+        assert client.get("/api/vendor/profile/pdf", headers=auth(token)).content == b"%PDF-1.4 segundo"
+
+    def test_pdf_acima_de_4mb_e_rejeitado(self):
+        # A Vercel limita o corpo da requisicao a 4,5 MB; o limite do app fica abaixo disso.
+        token = get_token("11999999994", "vendedor1")
+        grande = b"%PDF" + b"0" * (4 * 1024 * 1024)
+        assert self._upload(token, grande).status_code == 400
+        assert client.get("/api/vendor/profile", headers=auth(token)).json()["tem_pdf"] is False
+
+    def test_arquivo_que_nao_e_pdf_e_rejeitado(self):
+        token = get_token("11999999994", "vendedor1")
+        assert self._upload(token, b"nao sou pdf", tipo="text/plain").status_code == 400
+
+    def test_admin_remove_prestador_que_tem_pdf(self):
+        tv = get_token("11999999994", "vendedor1")
+        self._upload(tv)
+        vendor_id = client.get("/api/auth/me", headers=auth(tv)).json()["id"]
+        ta = get_token("11999999999", "admin123")
+        resp = client.delete(f"/api/admin/users/{vendor_id}", headers=auth(ta))
+        assert resp.status_code == 200
+        ids = [u["id"] for u in client.get("/api/admin/users", headers=auth(ta)).json()["items"]]
+        assert vendor_id not in ids
+
+
+# ---------------------------------------------------------------------------
+# SPA — a rota curinga nunca pode servir arquivos do projeto
+# ---------------------------------------------------------------------------
+
+class TestSpa:
+
+    def test_raiz_serve_o_index(self):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert "<html" in resp.text.lower()
+
+    def test_rota_do_frontend_serve_o_index(self):
+        assert client.get("/marketplace").text == client.get("/").text
+
+    @pytest.mark.parametrize("caminho", [
+        "/api.py", "/database.py", "/.env", "/.env.example",
+        "/marketplace.db", "/requirements.txt", "/tests/test_api.py",
+    ])
+    def test_nao_expoe_arquivos_do_projeto(self, caminho):
+        # Antes da correcao, GET /api.py devolvia o codigo-fonte e GET /.env os segredos.
+        assert client.get(caminho).text == client.get("/").text
+
+    def test_rota_de_api_inexistente_devolve_404_e_nao_html(self):
+        resp = client.get("/api/nao-existe")
+        assert resp.status_code == 404
+        assert "<html" not in resp.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Configuracao do banco (PostgreSQL em producao)
+# ---------------------------------------------------------------------------
+
+class TestUrlDoBanco:
+
+    @pytest.mark.parametrize("entrada", [
+        "postgres://u:s@host/db",       # formato legado (Heroku e afins)
+        "postgresql://u:s@host/db",     # formato que o Neon entrega
+    ])
+    def test_postgres_usa_driver_psycopg3(self, entrada):
+        assert _db._normalizar_url(entrada) == "postgresql+psycopg://u:s@host/db"
+
+    def test_url_ja_normalizada_nao_muda(self):
+        url = "postgresql+psycopg://u:s@host/db?sslmode=require"
+        assert _db._normalizar_url(url) == url
+
+    def test_sqlite_nao_muda(self):
+        assert _db._normalizar_url("sqlite:///marketplace.db") == "sqlite:///marketplace.db"

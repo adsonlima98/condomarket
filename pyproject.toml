@@ -1,0 +1,22 @@
+[project]
+name = "condomarket"
+version = "1.0.0"
+description = "Marketplace interno para condominios"
+requires-python = ">=3.12"
+# Mantenha em sincronia com requirements.txt (usado no desenvolvimento local e no Docker).
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "python-multipart>=0.0.9",
+    "python-jose[cryptography]>=3.3.0",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "bcrypt>=4.0.0",
+    "slowapi>=0.1.9",
+    "psycopg[binary]>=3.2",
+]
+
+# A Vercel procura um `app` em arquivos como app.py — mas aqui app.py e o
+# frontend Streamlit legado. A API FastAPI de verdade esta em api.py.
+[tool.vercel]
+entrypoint = "api:app"

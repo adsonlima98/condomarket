@@ -1,24 +1,45 @@
 import os
 import bcrypt
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, LargeBinary
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, deferred
+from sqlalchemy.pool import NullPool
 
 # ── Banco de dados ──────────────────────────────────────────────────────────
-# Em producao defina DATABASE_URL=postgresql://user:pass@host/db
-# Em desenvolvimento usa SQLite local (nao recomendado em producao)
-# Em producao: DATABASE_URL=postgresql://...  (recomendado)
-# Fallback SQLite: usa DATA_DIR/marketplace.db se definido (volume Fly.io)
-_default_db = "sqlite:///marketplace.db"
-if os.environ.get("DATA_DIR") and not os.environ.get("DATABASE_URL"):
-    _default_db = f"sqlite:///{os.environ['DATA_DIR']}/marketplace.db"
-DATABASE_URL = os.environ.get("DATABASE_URL", _default_db)
+# Producao (Vercel): DATABASE_URL=postgresql://... — injetada pela integracao Neon.
+# Desenvolvimento: sem DATABASE_URL, usa o SQLite local marketplace.db.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///marketplace.db")
 
-# Compatibilidade: converte postgres:// → postgresql:// (Heroku/Railway legacy)
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Na Vercel o sistema de arquivos e somente leitura e nao persiste entre
+# execucoes: um SQLite ali perderia os dados (ou nem abriria). Falha cedo e claro.
+if os.environ.get("VERCEL") and DATABASE_URL.startswith("sqlite"):
+    raise RuntimeError(
+        "DATABASE_URL nao definida. Na Vercel o banco precisa ser PostgreSQL: "
+        "conecte um banco Neon ao projeto em Storage (a variavel e criada sozinha)."
+    )
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+
+def _normalizar_url(url: str) -> str:
+    """Usa o driver psycopg 3 para qualquer URL PostgreSQL (inclusive o legado postgres://)."""
+    for prefixo in ("postgres://", "postgresql://"):
+        if url.startswith(prefixo):
+            return "postgresql+psycopg://" + url[len(prefixo):]
+    return url
+
+
+DATABASE_URL = _normalizar_url(DATABASE_URL)
+
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # Serverless: cada instancia da funcao e efemera, entao o pool de conexoes
+    # fica no pooler do provedor (Neon/PgBouncer), nao no processo — NullPool.
+    # prepare_threshold=None desliga prepared statements automaticos do psycopg,
+    # que quebram atras de PgBouncer em modo transacao.
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=NullPool,
+        connect_args={"prepare_threshold": None},
+    )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -72,6 +93,17 @@ class PerfilComercial(Base):
     whatsapp = Column(String, nullable=False)
     pdf_cardapio = Column(String, nullable=True)
     usuario = relationship("Usuario", back_populates="perfil_comercial")
+
+
+class CardapioPdf(Base):
+    """Cardapio em PDF do prestador, guardado no proprio banco.
+
+    Fica no banco (e nao em disco) porque a Vercel nao tem disco persistente.
+    Tabela separada para que listar prestadores nunca carregue os bytes do PDF.
+    """
+    __tablename__ = "cardapios_pdf"
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), primary_key=True)
+    conteudo = deferred(Column(LargeBinary, nullable=False))
 
 
 def get_session():
