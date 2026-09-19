@@ -330,6 +330,56 @@ class AdminProfileBody(BaseModel):
         return v
 
 
+class AdminUserUpdateBody(BaseModel):
+    """Edicao de um usuario qualquer pelo administrador.
+
+    Nao existe campo is_admin de proposito: o cargo de administrador nao se
+    concede nem se remove por aqui, so pela ADMIN_PASSWORD no deploy. Assim um
+    XSS no painel (ja houve um) nao consegue fabricar um administrador.
+    """
+    nome: str
+    telefone: str
+    bloco: str
+    apartamento: str
+    condominio_id: int
+    is_vendedor: bool = False
+    senha_nova: Optional[str] = None
+
+    @field_validator("nome")
+    @classmethod
+    def nome_valido(cls, v):
+        v = v.strip()
+        if len(v) < 2 or len(v) > 100:
+            raise ValueError("Nome deve ter entre 2 e 100 caracteres")
+        return v
+
+    @field_validator("telefone")
+    @classmethod
+    def telefone_valido(cls, v):
+        v = v.strip()
+        if not v.isdigit() or not (8 <= len(v) <= 20):
+            raise ValueError("Telefone deve conter apenas digitos (8-20 caracteres)")
+        return v
+
+    @field_validator("bloco", "apartamento")
+    @classmethod
+    def campo_obrigatorio_curto(cls, v):
+        v = (v or "").strip()
+        if not v or len(v) > 20:
+            raise ValueError("Campo obrigatorio (max 20 caracteres)")
+        return v
+
+    @field_validator("senha_nova")
+    @classmethod
+    def senha_forte(cls, v):
+        if not v:
+            return None
+        min_len = int(_env("PASSWORD_MIN_LEN", "8"))
+        if len(v) < min_len:
+            raise ValueError(f"Nova senha deve ter no minimo {min_len} caracteres")
+        return v
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/api/health")
 def health_check():
@@ -697,11 +747,39 @@ def delete_condominium(condo_id: int, admin_id: int = Depends(require_admin)):
         cond = session.query(Condominio).filter_by(id=condo_id).first()
         if not cond:
             raise HTTPException(status_code=404, detail="Condominio nao encontrado")
-        if session.query(Usuario).filter_by(condominio_id=condo_id).first():
-            raise HTTPException(status_code=400, detail="Nao e possivel excluir condominio com usuarios")
+        vinculados = session.query(Usuario).filter_by(condominio_id=condo_id).count()
+        if vinculados:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Nao e possivel excluir: {vinculados} usuario(s) ainda pertencem a este "
+                       f"condominio. Mova-os para outro condominio ou exclua-os antes.")
         session.delete(cond)
         session.commit()
         return {"ok": True, "message": "Condominio removido com sucesso"}
+    finally:
+        session.close()
+
+
+@app.put("/api/admin/condominiums/{condo_id}")
+def update_condominium(condo_id: int, req: CondominiumBody, admin_id: int = Depends(require_admin)):
+    """Renomeia o condominio e/ou troca o token de acesso.
+
+    Trocar o token invalida o anterior: quem ainda nao se cadastrou precisa do novo.
+    """
+    session = SessionLocal()
+    try:
+        cond = session.query(Condominio).filter_by(id=condo_id).first()
+        if not cond:
+            raise HTTPException(status_code=404, detail="Condominio nao encontrado")
+        if req.token_acesso != cond.token_acesso:
+            em_uso = session.query(Condominio).filter_by(token_acesso=req.token_acesso).first()
+            if em_uso and em_uso.id != condo_id:
+                raise HTTPException(status_code=400, detail="Token ja esta em uso por outro condominio")
+        cond.nome = req.nome
+        cond.token_acesso = req.token_acesso
+        session.commit()
+        return {"id": condo_id, "nome": req.nome, "token_acesso": req.token_acesso,
+                "message": "Condominio atualizado com sucesso"}
     finally:
         session.close()
 
@@ -779,6 +857,61 @@ def update_admin_profile(body: AdminProfileBody, admin_id: int = Depends(require
         session.refresh(u)
         return {"ok": True, "message": "Perfil atualizado com sucesso",
                 "user": {"id": u.id, "nome": u.nome, "telefone": u.telefone, "is_admin": u.is_admin}}
+    finally:
+        session.close()
+
+
+@app.put("/api/admin/users/{user_id}")
+def update_user(user_id: int, body: AdminUserUpdateBody, admin_id: int = Depends(require_admin)):
+    """Corrige o cadastro de um usuario, inclusive redefinindo a senha.
+
+    Redefinir sem a senha antiga e intencional: o app nao tem recuperacao de senha,
+    entao quem esquece so volta por aqui.
+    """
+    from sqlalchemy.orm import undefer
+    session = SessionLocal()
+    try:
+        u = (session.query(Usuario)
+             .options(undefer(Usuario.bloco), undefer(Usuario.apartamento))
+             .filter_by(id=user_id).first())
+        if not u:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+        if u.is_admin:
+            raise HTTPException(
+                status_code=400,
+                detail="Nao e possivel editar um administrador por aqui")
+
+        if body.telefone != u.telefone:
+            em_uso = session.query(Usuario).filter_by(telefone=body.telefone).first()
+            if em_uso and em_uso.id != user_id:
+                raise HTTPException(status_code=400, detail="Telefone ja cadastrado por outro usuario")
+
+        cond = session.query(Condominio).filter_by(id=body.condominio_id).first()
+        if not cond:
+            raise HTTPException(status_code=400, detail="Condominio nao encontrado")
+        cond_nome = cond.nome
+
+        # Deixar de ser prestador apaga o que so faz sentido para prestador,
+        # senao sobra perfil e PDF orfaos apontando para um morador comum.
+        if u.is_vendedor and not body.is_vendedor:
+            perfil = session.query(PerfilComercial).filter_by(usuario_id=user_id).first()
+            if perfil:
+                session.delete(perfil)
+            session.query(CardapioPdf).filter_by(usuario_id=user_id).delete()
+
+        u.nome = body.nome
+        u.telefone = body.telefone
+        u.bloco = body.bloco
+        u.apartamento = body.apartamento
+        u.condominio_id = body.condominio_id
+        u.is_vendedor = body.is_vendedor
+        if body.senha_nova:
+            u.senha_hash = hash_senha(body.senha_nova)
+        session.commit()
+        return {"ok": True, "message": "Usuario atualizado com sucesso",
+                "user": {"id": user_id, "nome": body.nome, "telefone": body.telefone,
+                         "bloco": body.bloco, "apartamento": body.apartamento,
+                         "is_vendedor": body.is_vendedor, "condominio": cond_nome}}
     finally:
         session.close()
 

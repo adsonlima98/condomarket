@@ -923,6 +923,9 @@
 
   /* ─── ADMIN GRID ─────────────────────────────────────── */
   .admin-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  /* Item de grid nasce com min-width:auto e estica para caber a tabela, levando a
+     pagina inteira junto. Com 0, quem rola e o .table-wrap, nao a tela. */
+  .admin-grid > .card { min-width: 0; }
 
   /* ─── TABLE ──────────────────────────────────────────── */
   .table-wrap { overflow-x: auto; }
@@ -1089,6 +1092,30 @@
   }
   @media (hover: hover) { .modal-close:hover { background: var(--g200); color: var(--black); } }
 
+  /* ─── ACOES NA LINHA (painel do admin) ───────────────── */
+  .row-actions { display: flex; gap: .25rem; justify-content: flex-end; }
+  .icon-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--g200);
+    background: var(--white);
+    color: var(--g600);
+    transition: var(--t-controls);
+  }
+  @media (hover: hover) {
+    .icon-btn:hover { background: var(--g100); color: var(--black); border-color: var(--g300); }
+    .icon-btn-danger:hover { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+  }
+  .icon-btn:active { transform: scale(.94); }
+  .row-actions-locked { color: var(--text-3); font-size: .75rem; text-align: right; display: block; }
+  /* Botao destrutivo: so aparece dentro de modal de confirmacao */
+  .btn-danger { background: var(--red); color: var(--white); border: 1.5px solid var(--red); }
+  @media (hover: hover) { .btn-danger:hover { background: #b91c1c; border-color: #b91c1c; } }
+  .modal-actions { display: flex; gap: .625rem; margin-top: 1.5rem; }
+  .modal-body-scroll { max-height: min(68vh, 640px); overflow-y: auto; margin: 0 -.25rem; padding: 0 .25rem; }
+  .modal-text { color: var(--g700); line-height: 1.6; font-size: .9375rem; }
+
   /* ─── RESPONSIVE ─────────────────────────────────────── */
   @media (max-width: 900px) {
     .auth-panel-left { display: none; }
@@ -1133,6 +1160,7 @@
   /* Alvos de toque de pelo menos 44px em telas de toque */
   @media (pointer: coarse) {
     .btn, .btn-sm, .btn-xs, .pdf-dl-btn, .btn-nav-logout, .auth-tab { min-height: 44px; }
+    .icon-btn { min-width: 44px; min-height: 44px; }
     #announce { min-height: 44px; display: flex; align-items: center; justify-content: center; }
     #announce-close, .modal-close {
       min-width: 44px; min-height: 44px;
@@ -1145,7 +1173,7 @@
     .toast, .auth-form-box, .modal { animation-name: fadeIn; }
     .toast.out { animation-name: fadeOnly; }
     .btn:active, .pdf-dl-btn:active, .btn-nav-logout:active,
-    .modal-close:active { transform: none; }
+    .modal-close:active, .icon-btn:active { transform: none; }
   }
   @keyframes fadeOnly { to { opacity: 0; } }
   @media (prefers-reduced-transparency: reduce) {
@@ -1161,6 +1189,9 @@
 
 <!-- ── TOAST CONTAINER ── -->
 <div id="toast-container" role="status" aria-live="polite"></div>
+
+<!-- ── MODAL ROOT (confirmacoes e edicao do admin) ── -->
+<div id="modal-root"></div>
 
 <!-- ════════════════════════════════════════════════════════
      AUTH SCREEN
@@ -2028,7 +2059,7 @@ function renderAdminContent(stats, condos, users) {
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Nome</th><th>Token</th></tr></thead>
+            <thead><tr><th>ID</th><th>Nome</th><th>Token</th><th style="text-align:right">Ações</th></tr></thead>
             <tbody id="adm-ct">${condoRows(condos)}</tbody>
           </table>
         </div>
@@ -2071,7 +2102,7 @@ function renderAdminContent(stats, condos, users) {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nome</th><th>Telefone</th><th>Bloco</th><th>Apto</th><th>Condomínio</th><th>Perfil</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Bloco</th><th>Apto</th><th>Condomínio</th><th>Perfil</th><th style="text-align:right">Ações</th></tr></thead>
           <tbody id="adm-ut">${userRows(users)}</tbody>
         </table>
       </div>
@@ -2079,24 +2110,47 @@ function renderAdminContent(stats, condos, users) {
   `;
 }
 
+// Os botoes de acao carregam apenas o id NUMERICO no onclick; o objeto e buscado
+// em window._condos / window._users. Nenhum dado digitado por usuario entra dentro
+// de atributo HTML — a mesma regra que corrigiu o XSS armazenado do painel.
 function condoRows(list) {
-  if (!list.length) return `<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum condomínio.</td></tr>`;
+  if (!list.length) return `<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum condomínio.</td></tr>`;
   return list.map(c => `
     <tr>
       <td><span class="badge badge-outline">${esc(c.id)}</span></td>
       <td><strong>${esc(c.nome)}</strong></td>
       <td><span class="badge badge-black">${esc(c.token_acesso)}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" aria-label="Editar condomínio" title="Editar"
+            onclick="abrirEdicaoCondo(${Number(c.id)})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-btn" aria-label="Gerar novo token" title="Gerar novo token"
+            onclick="confirmarRotacaoToken(${Number(c.id)})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg></button>
+          <button class="icon-btn icon-btn-danger" aria-label="Excluir condomínio" title="Excluir"
+            onclick="confirmarExclusaoCondo(${Number(c.id)})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+        </div>
+      </td>
     </tr>`).join('');
 }
 
 function userRows(list) {
-  if (!list.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum usuário.</td></tr>`;
+  if (!list.length) return `<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:2rem">Nenhum usuário.</td></tr>`;
   return list.map(u => {
     const badge = u.is_admin
       ? `<span class="badge badge-black">Admin</span>`
       : u.is_vendedor
         ? `<span class="badge badge-amber">Prestador</span>`
         : `<span class="badge badge-blue">Morador</span>`;
+    // Conta de administrador nao se edita nem se exclui pela lista: o admin muda os
+    // proprios dados em "Editar meu acesso" e o cargo so vem do deploy.
+    const acoes = u.is_admin
+      ? `<span class="row-actions-locked">—</span>`
+      : `<div class="row-actions">
+          <button class="icon-btn" aria-label="Editar usuário" title="Editar"
+            onclick="abrirEdicaoUsuario(${Number(u.id)})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-btn icon-btn-danger" aria-label="Excluir usuário" title="Excluir"
+            onclick="confirmarExclusaoUsuario(${Number(u.id)})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+        </div>`;
     return `<tr>
       <td><strong>${esc(u.nome)}</strong></td>
       <td style="color:var(--g500)">${esc(u.telefone)}</td>
@@ -2104,6 +2158,7 @@ function userRows(list) {
       <td>${esc(u.apartamento||'—')}</td>
       <td>${esc(u.condominio)}</td>
       <td>${badge}</td>
+      <td>${acoes}</td>
     </tr>`;
   }).join('');
 }
@@ -2138,6 +2193,258 @@ async function createCondo() {
   } catch(e) {
     ae.innerHTML = `<div class="alert alert-error">⚠ ${esc(e.message)}</div>`;
     setBtnLoad('btn-cc', false, 'Cadastrar condomínio');
+  }
+}
+
+// ─── MODAL ────────────────────────────────────────────────
+// Um modal por vez. Guarda quem tinha o foco para devolver ao fechar, para o
+// teclado nao voltar para o topo da pagina.
+let _focoAntesDoModal = null;
+
+function abrirModal(titulo, corpoHtml) {
+  fecharModal();
+  _focoAntesDoModal = document.activeElement;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.id = 'modal-overlay';
+  ov.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-hd">
+        <h3 class="modal-title" id="modal-title">${esc(titulo)}</h3>
+        <button class="modal-close" aria-label="Fechar" onclick="fecharModal()">✕</button>
+      </div>
+      ${corpoHtml}
+    </div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov) fecharModal(); });
+  document.getElementById('modal-root').appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', _teclaNoModal);
+  const primeiro = ov.querySelector('input, select, .btn');
+  if (primeiro) primeiro.focus();
+}
+
+function _teclaNoModal(e) {
+  if (e.key === 'Escape') { fecharModal(); return; }
+  // Prende o Tab dentro do modal enquanto ele estiver aberto.
+  if (e.key !== 'Tab') return;
+  const ov = document.getElementById('modal-overlay');
+  if (!ov) return;
+  const alvos = ov.querySelectorAll('input, select, textarea, button');
+  if (!alvos.length) return;
+  const primeiro = alvos[0], ultimo = alvos[alvos.length - 1];
+  if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+  else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+}
+
+function fecharModal() {
+  const ov = document.getElementById('modal-overlay');
+  if (ov) ov.remove();
+  document.removeEventListener('keydown', _teclaNoModal);
+  document.body.style.overflow = '';
+  if (_focoAntesDoModal && document.contains(_focoAntesDoModal)) _focoAntesDoModal.focus();
+  _focoAntesDoModal = null;
+}
+
+const acoesModal = (idBotao, rotulo, aoConfirmar, perigo) => `
+  <div class="modal-actions">
+    <button class="btn btn-ghost" style="flex:.45" onclick="fecharModal()">Cancelar</button>
+    <button class="btn ${perigo ? 'btn-danger' : 'btn-primary'}" style="flex:1"
+      id="${idBotao}" onclick="${aoConfirmar}">${rotulo}</button>
+  </div>`;
+
+// ─── ADMIN: EDITAR E EXCLUIR USUARIO ──────────────────────
+function abrirEdicaoUsuario(id) {
+  const u = (window._users || []).find(x => x.id === id);
+  if (!u) return;
+  const opcoes = (window._condos || []).map(c =>
+    `<option value="${Number(c.id)}"${c.nome === u.condominio ? ' selected' : ''}>${esc(c.nome)}</option>`
+  ).join('');
+  abrirModal('Editar usuário', `
+    <div id="mod-alert"></div>
+    <div class="modal-body-scroll">
+      <div class="form-group">
+        <label class="form-label" for="eu-nome">Nome</label>
+        <input class="form-input" id="eu-nome" maxlength="100" value="${esc(u.nome)}" />
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <div class="form-group" style="flex:1">
+          <label class="form-label" for="eu-bloco">Bloco</label>
+          <input class="form-input" id="eu-bloco" maxlength="20" value="${esc(u.bloco || '')}" />
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label" for="eu-apto">Apartamento</label>
+          <input class="form-input" id="eu-apto" maxlength="20" value="${esc(u.apartamento || '')}" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="eu-tel">Telefone</label>
+        <input class="form-input" id="eu-tel" inputmode="numeric" maxlength="20" value="${esc(u.telefone)}" />
+        <p class="form-hint">É o login desta pessoa — só dígitos.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="eu-condo">Condomínio</label>
+        <select class="form-select" id="eu-condo">${opcoes}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="eu-tipo">Tipo de perfil</label>
+        <select class="form-select" id="eu-tipo">
+          <option value="0"${u.is_vendedor ? '' : ' selected'}>Morador</option>
+          <option value="1"${u.is_vendedor ? ' selected' : ''}>Prestador</option>
+        </select>
+        ${u.is_vendedor ? `<p class="form-hint">Mudar para morador apaga o perfil comercial e o cardápio em PDF.</p>` : ''}
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="eu-senha">Nova senha (opcional)</label>
+        <input class="form-input" id="eu-senha" type="password" autocomplete="new-password"
+          placeholder="Deixe em branco para manter a atual" />
+        <p class="form-hint">Use quando a pessoa esquecer a senha: o app não tem recuperação automática.</p>
+      </div>
+    </div>
+    ${acoesModal('btn-eu', 'Salvar alterações', `salvarUsuario(${Number(u.id)})`, false)}
+  `);
+}
+
+async function salvarUsuario(id) {
+  const senha = document.getElementById('eu-senha').value;
+  const corpo = {
+    nome: document.getElementById('eu-nome').value.trim(),
+    telefone: document.getElementById('eu-tel').value.trim(),
+    bloco: document.getElementById('eu-bloco').value.trim(),
+    apartamento: document.getElementById('eu-apto').value.trim(),
+    condominio_id: Number(document.getElementById('eu-condo').value),
+    is_vendedor: document.getElementById('eu-tipo').value === '1',
+  };
+  if (senha) corpo.senha_nova = senha;
+  setAlert('mod-alert', '', '');
+  setBtnLoad('btn-eu', true);
+  try {
+    await api('PUT', `/api/admin/users/${id}`, corpo);
+    fecharModal();
+    toast('success', 'Usuário atualizado.');
+    viewAdmin();
+  } catch(e) {
+    setAlert('mod-alert', 'error', e.message);
+    setBtnLoad('btn-eu', false, 'Salvar alterações');
+  }
+}
+
+function confirmarExclusaoUsuario(id) {
+  const u = (window._users || []).find(x => x.id === id);
+  if (!u) return;
+  abrirModal('Excluir usuário', `
+    <div id="mod-alert"></div>
+    <p class="modal-text">
+      Excluir <strong>${esc(u.nome)}</strong> — ${esc(u.telefone)} — apaga junto o perfil
+      comercial e o cardápio em PDF, se existirem. Não é possível desfazer.
+    </p>
+    ${acoesModal('btn-du', 'Excluir definitivamente', `excluirUsuario(${Number(u.id)})`, true)}
+  `);
+}
+
+async function excluirUsuario(id) {
+  setAlert('mod-alert', '', '');
+  setBtnLoad('btn-du', true);
+  try {
+    await api('DELETE', `/api/admin/users/${id}`);
+    fecharModal();
+    toast('success', 'Usuário excluído.');
+    viewAdmin();
+  } catch(e) {
+    setAlert('mod-alert', 'error', e.message);
+    setBtnLoad('btn-du', false, 'Excluir definitivamente');
+  }
+}
+
+// ─── ADMIN: EDITAR, ROTACIONAR E EXCLUIR CONDOMINIO ───────
+function abrirEdicaoCondo(id) {
+  const c = (window._condos || []).find(x => x.id === id);
+  if (!c) return;
+  abrirModal('Editar condomínio', `
+    <div id="mod-alert"></div>
+    <div class="form-group">
+      <label class="form-label" for="ec-nome">Nome</label>
+      <input class="form-input" id="ec-nome" maxlength="100" value="${esc(c.nome)}" />
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="ec-token">Token de acesso</label>
+      <input class="form-input" id="ec-token" maxlength="30" value="${esc(c.token_acesso)}"
+        style="text-transform:uppercase;letter-spacing:.06em" oninput="this.value=this.value.toUpperCase()" />
+      <p class="form-hint">Trocar o token invalida o anterior: quem ainda não se cadastrou vai precisar do novo.</p>
+    </div>
+    ${acoesModal('btn-ec', 'Salvar alterações', `salvarCondo(${Number(c.id)})`, false)}
+  `);
+}
+
+async function salvarCondo(id) {
+  const corpo = {
+    nome: document.getElementById('ec-nome').value.trim(),
+    token_acesso: document.getElementById('ec-token').value.trim().toUpperCase(),
+  };
+  setAlert('mod-alert', '', '');
+  setBtnLoad('btn-ec', true);
+  try {
+    await api('PUT', `/api/admin/condominiums/${id}`, corpo);
+    fecharModal();
+    toast('success', 'Condomínio atualizado.');
+    viewAdmin();
+  } catch(e) {
+    setAlert('mod-alert', 'error', e.message);
+    setBtnLoad('btn-ec', false, 'Salvar alterações');
+  }
+}
+
+function confirmarRotacaoToken(id) {
+  const c = (window._condos || []).find(x => x.id === id);
+  if (!c) return;
+  abrirModal('Gerar novo token', `
+    <div id="mod-alert"></div>
+    <p class="modal-text">
+      Um token aleatório vai substituir o <strong>${esc(c.token_acesso)}</strong> em
+      <strong>${esc(c.nome)}</strong>. O código antigo para de funcionar no cadastro;
+      quem já tem conta continua entrando normalmente.
+    </p>
+    ${acoesModal('btn-rt', 'Gerar novo token', `rotacionarToken(${Number(c.id)})`, false)}
+  `);
+}
+
+async function rotacionarToken(id) {
+  setAlert('mod-alert', '', '');
+  setBtnLoad('btn-rt', true);
+  try {
+    const d = await api('POST', `/api/admin/condominiums/${id}/rotate-token`);
+    fecharModal();
+    toast('success', `Novo token: ${d.token_acesso}`);
+    viewAdmin();
+  } catch(e) {
+    setAlert('mod-alert', 'error', e.message);
+    setBtnLoad('btn-rt', false, 'Gerar novo token');
+  }
+}
+
+function confirmarExclusaoCondo(id) {
+  const c = (window._condos || []).find(x => x.id === id);
+  if (!c) return;
+  abrirModal('Excluir condomínio', `
+    <div id="mod-alert"></div>
+    <p class="modal-text">
+      Excluir <strong>${esc(c.nome)}</strong>? Só é possível quando nenhum usuário
+      pertence mais a ele — mova ou exclua os moradores antes.
+    </p>
+    ${acoesModal('btn-dc', 'Excluir definitivamente', `excluirCondo(${Number(c.id)})`, true)}
+  `);
+}
+
+async function excluirCondo(id) {
+  setAlert('mod-alert', '', '');
+  setBtnLoad('btn-dc', true);
+  try {
+    await api('DELETE', `/api/admin/condominiums/${id}`);
+    fecharModal();
+    toast('success', 'Condomínio excluído.');
+    viewAdmin();
+  } catch(e) {
+    setAlert('mod-alert', 'error', e.message);
+    setBtnLoad('btn-dc', false, 'Excluir definitivamente');
   }
 }
 

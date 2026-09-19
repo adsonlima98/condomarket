@@ -633,3 +633,242 @@ class TestSenhaComVariavelVazia:
         resp = client.post("/api/auth/change-password", headers=auth(token),
                            json={"senha_atual": "morador1", "senha_nova": "nova-senha-longa"})
         assert resp.status_code == 200, resp.text
+
+
+# ---------------------------------------------------------------------------
+# Admin: edicao de usuarios e condominios
+# ---------------------------------------------------------------------------
+
+class TestAdminEdicaoUsuario:
+    """PUT /api/admin/users/{id} - o admin corrige cadastros errados."""
+
+    def _listar(self, token):
+        return client.get("/api/admin/users", headers=auth(token)).json()["items"]
+
+    def _morador(self, token):
+        return next(u for u in self._listar(token) if not u["is_admin"] and not u["is_vendedor"])
+
+    def _prestador(self, token):
+        return next(u for u in self._listar(token) if u["is_vendedor"])
+
+    def _corpo(self, token, u, **mudancas):
+        """Monta o corpo completo a partir de um usuario ja listado."""
+        condos = client.get("/api/admin/condominiums", headers=auth(token)).json()["items"]
+        condo_id = next(c["id"] for c in condos if c["nome"] == u["condominio"])
+        corpo = {"nome": u["nome"], "telefone": u["telefone"], "bloco": u["bloco"],
+                 "apartamento": u["apartamento"], "condominio_id": condo_id,
+                 "is_vendedor": u["is_vendedor"]}
+        corpo.update(mudancas)
+        return corpo
+
+    def test_editar_dados_basicos(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, nome="Joao da Silva Corrigido",
+                                           telefone="11900000001", bloco="D", apartamento="909"))
+        assert resp.status_code == 200, resp.text
+
+        editado = next(x for x in self._listar(token) if x["id"] == u["id"])
+        assert editado["nome"] == "Joao da Silva Corrigido"
+        assert editado["telefone"] == "11900000001"
+        assert editado["bloco"] == "D"
+        assert editado["apartamento"] == "909"
+
+    def test_telefone_novo_serve_para_login(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                   json=self._corpo(token, u, telefone="11900000002"))
+        client.cookies.clear()
+        resp = client.post("/api/auth/login", json={"telefone": "11900000002", "senha": "morador1"})
+        assert resp.status_code == 200
+
+    def test_telefone_duplicado_recusado(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, telefone="11999999992"))
+        assert resp.status_code == 400
+
+    def test_manter_o_proprio_telefone_e_permitido(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, nome="So Trocou o Nome"))
+        assert resp.status_code == 200
+
+    def test_usuario_inexistente(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put("/api/admin/users/999999", headers=auth(token),
+                          json=self._corpo(token, u))
+        assert resp.status_code == 404
+
+    def test_nao_edita_outro_admin(self):
+        token = get_token("11999999999", "admin123")
+        adm = next(x for x in self._listar(token) if x["is_admin"])
+        resp = client.put(f"/api/admin/users/{adm['id']}", headers=auth(token),
+                          json=self._corpo(token, adm, nome="Tentativa"))
+        assert resp.status_code == 400
+
+    def test_morador_nao_pode_editar(self):
+        admin_token = get_token("11999999999", "admin123")
+        u = self._morador(admin_token)
+        corpo = self._corpo(admin_token, u, nome="Invasao")
+        client.cookies.clear()
+        token = get_token("11999999991", "morador1")
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token), json=corpo)
+        assert resp.status_code == 403
+
+    def test_condominio_inexistente_recusado(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, condominio_id=999999))
+        assert resp.status_code == 400
+
+    def test_mudar_de_condominio(self):
+        token = get_token("11999999999", "admin123")
+        novo = client.post("/api/admin/condominiums", headers=auth(token),
+                           json={"nome": "Vila Nova", "token_acesso": "VILA2026"}).json()
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, condominio_id=novo["id"]))
+        assert resp.status_code == 200
+        assert next(x for x in self._listar(token) if x["id"] == u["id"])["condominio"] == "Vila Nova"
+
+    def test_prestador_vira_morador_apaga_perfil_e_pdf(self):
+        token = get_token("11999999999", "admin123")
+        p = next(u for u in self._listar(token) if u["telefone"] == "11999999994")
+        corpo = self._corpo(token, p, is_vendedor=False)
+
+        # Garante que ele tem PDF antes da conversao
+        client.cookies.clear()
+        vend_token = get_token("11999999994", "vendedor1")
+        envio = client.post("/api/vendor/profile/pdf", headers=auth(vend_token),
+                            files={"file": ("cardapio.pdf", b"%PDF-1.4 teste", "application/pdf")})
+        assert envio.status_code == 200, envio.text
+
+        client.cookies.clear()
+        token = get_token("11999999999", "admin123")
+        resp = client.put(f"/api/admin/users/{p['id']}", headers=auth(token), json=corpo)
+        assert resp.status_code == 200, resp.text
+
+        session = _db.SessionLocal()
+        try:
+            assert session.query(_db.PerfilComercial).filter_by(usuario_id=p["id"]).first() is None
+            assert session.query(_db.CardapioPdf).filter_by(usuario_id=p["id"]).first() is None
+        finally:
+            session.close()
+
+    def test_morador_vira_prestador(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, is_vendedor=True))
+        assert resp.status_code == 200
+        assert next(x for x in self._listar(token) if x["id"] == u["id"])["is_vendedor"] is True
+
+    def test_redefinir_senha_permite_login(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, senha_nova="senha-nova-123"))
+        assert resp.status_code == 200
+
+        client.cookies.clear()
+        ok = client.post("/api/auth/login",
+                         json={"telefone": u["telefone"], "senha": "senha-nova-123"})
+        assert ok.status_code == 200
+        client.cookies.clear()
+        velha = client.post("/api/auth/login",
+                            json={"telefone": u["telefone"], "senha": "morador1"})
+        assert velha.status_code == 401
+
+    def test_senha_curta_recusada(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        # PASSWORD_MIN_LEN=4 nos testes
+        resp = client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                          json=self._corpo(token, u, senha_nova="x"))
+        assert resp.status_code == 422
+
+    def test_sem_senha_nova_mantem_a_antiga(self):
+        token = get_token("11999999999", "admin123")
+        u = self._morador(token)
+        client.put(f"/api/admin/users/{u['id']}", headers=auth(token),
+                   json=self._corpo(token, u, nome="Outro Nome"))
+        client.cookies.clear()
+        resp = client.post("/api/auth/login", json={"telefone": u["telefone"], "senha": "morador1"})
+        assert resp.status_code == 200
+
+
+class TestAdminEdicaoCondominio:
+    """PUT /api/admin/condominiums/{id}"""
+
+    def _listar(self, token):
+        return client.get("/api/admin/condominiums", headers=auth(token)).json()["items"]
+
+    def _condo(self, token, nome="Recanto das Flores"):
+        return next(c for c in self._listar(token) if c["nome"] == nome)
+
+    def test_editar_nome_e_token(self):
+        token = get_token("11999999999", "admin123")
+        c = self._condo(token)
+        resp = client.put(f"/api/admin/condominiums/{c['id']}", headers=auth(token),
+                          json={"nome": "Recanto das Flores II", "token_acesso": "recanto2027"})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["token_acesso"] == "RECANTO2027"  # normalizado para maiusculo
+
+        editado = next(x for x in self._listar(token) if x["id"] == c["id"])
+        assert editado["nome"] == "Recanto das Flores II"
+        assert editado["token_acesso"] == "RECANTO2027"
+
+    def test_token_antigo_para_de_valer_no_cadastro(self):
+        token = get_token("11999999999", "admin123")
+        c = self._condo(token)
+        client.put(f"/api/admin/condominiums/{c['id']}", headers=auth(token),
+                   json={"nome": c["nome"], "token_acesso": "TROCADO2026"})
+        antigo = client.post("/api/auth/validate-token", json={"token": "RECANTO2026"})
+        novo = client.post("/api/auth/validate-token", json={"token": "TROCADO2026"})
+        assert antigo.json()["valid"] is False
+        assert novo.json()["valid"] is True
+
+    def test_manter_o_proprio_token_e_permitido(self):
+        token = get_token("11999999999", "admin123")
+        c = self._condo(token)
+        resp = client.put(f"/api/admin/condominiums/{c['id']}", headers=auth(token),
+                          json={"nome": "Nome Novo", "token_acesso": c["token_acesso"]})
+        assert resp.status_code == 200
+
+    def test_token_de_outro_condominio_recusado(self):
+        token = get_token("11999999999", "admin123")
+        client.post("/api/admin/condominiums", headers=auth(token),
+                    json={"nome": "Outro", "token_acesso": "OUTRO2026"})
+        c = self._condo(token)
+        resp = client.put(f"/api/admin/condominiums/{c['id']}", headers=auth(token),
+                          json={"nome": c["nome"], "token_acesso": "OUTRO2026"})
+        assert resp.status_code == 400
+
+    def test_condominio_inexistente(self):
+        token = get_token("11999999999", "admin123")
+        resp = client.put("/api/admin/condominiums/999999", headers=auth(token),
+                          json={"nome": "X", "token_acesso": "X2026"})
+        assert resp.status_code == 404
+
+    def test_morador_nao_pode_editar(self):
+        admin_token = get_token("11999999999", "admin123")
+        c = self._condo(admin_token)
+        client.cookies.clear()
+        token = get_token("11999999991", "morador1")
+        resp = client.put(f"/api/admin/condominiums/{c['id']}", headers=auth(token),
+                          json={"nome": "Invadido", "token_acesso": "HACK2026"})
+        assert resp.status_code == 403
+
+    def test_erro_de_exclusao_informa_quantos_usuarios(self):
+        token = get_token("11999999999", "admin123")
+        c = self._condo(token)
+        resp = client.delete(f"/api/admin/condominiums/{c['id']}", headers=auth(token))
+        assert resp.status_code == 400
+        assert "5" in resp.json()["detail"]  # os 5 usuarios demo do Recanto
