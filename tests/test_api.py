@@ -610,3 +610,26 @@ class TestVariaveisDeAmbiente:
     def test_na_vercel_com_tudo_definido_sobe(self):
         r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64)
         assert r.returncode == 0, r.stderr[-400:]
+
+
+class TestSenhaComVariavelVazia:
+    """Em producao PASSWORD_MIN_LEN existia VAZIA no painel: os validadores de senha
+    faziam int('') a cada requisicao e cadastro/troca de senha davam 422 para todos."""
+
+    @pytest.fixture(autouse=True)
+    def _min_len_vazio(self, monkeypatch):
+        monkeypatch.setenv("PASSWORD_MIN_LEN", "")
+
+    def test_cadastro_funciona(self):
+        resp = client.post("/api/auth/register", json={
+            "token_condominio": "RECANTO2026", "nome": "Novo Morador",
+            "telefone": "11988887777", "senha": "senha-bem-longa",
+            "bloco": "A", "apartamento": "1",
+        })
+        assert resp.status_code == 200, resp.text
+
+    def test_troca_de_senha_funciona(self):
+        token = get_token("11999999991", "morador1")
+        resp = client.post("/api/auth/change-password", headers=auth(token),
+                           json={"senha_atual": "morador1", "senha_nova": "nova-senha-longa"})
+        assert resp.status_code == 200, resp.text

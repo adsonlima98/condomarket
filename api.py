@@ -207,7 +207,7 @@ class RegisterBody(BaseModel):
     @field_validator("senha")
     @classmethod
     def senha_forte(cls, v):
-        min_len = int(os.environ.get("PASSWORD_MIN_LEN", "8"))
+        min_len = int(_env("PASSWORD_MIN_LEN", "8"))
         if len(v) < min_len:
             raise ValueError(f"Senha deve ter no minimo {min_len} caracteres")
         return v
@@ -291,7 +291,7 @@ class ChangePasswordBody(BaseModel):
     @field_validator("senha_nova")
     @classmethod
     def senha_forte(cls, v):
-        min_len = int(os.environ.get("PASSWORD_MIN_LEN", "8"))
+        min_len = int(_env("PASSWORD_MIN_LEN", "8"))
         if len(v) < min_len:
             raise ValueError(f"Nova senha deve ter no minimo {min_len} caracteres")
         return v
@@ -324,7 +324,7 @@ class AdminProfileBody(BaseModel):
     def senha_forte(cls, v):
         if v is None:
             return v
-        min_len = int(os.environ.get("PASSWORD_MIN_LEN", "8"))
+        min_len = int(_env("PASSWORD_MIN_LEN", "8"))
         if len(v) < min_len:
             raise ValueError(f"Nova senha deve ter no minimo {min_len} caracteres")
         return v
