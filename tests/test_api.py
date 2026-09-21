@@ -608,7 +608,27 @@ class TestVariaveisDeAmbiente:
         assert "SECRET_KEY" in r.stderr
 
     def test_na_vercel_com_tudo_definido_sobe(self):
-        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64)
+        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64,
+                          ALLOWED_ORIGINS="https://exemplo.com")
+        assert r.returncode == 0, r.stderr[-400:]
+
+    def test_na_vercel_sem_allowed_origins_falha(self):
+        # Auditoria 2026-09-21: producao no ar com Access-Control-Allow-Origin: *
+        # porque so havia um warning no log. Agora o deploy quebra.
+        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64,
+                          ALLOWED_ORIGINS="")
+        assert r.returncode != 0
+        assert "ALLOWED_ORIGINS" in r.stderr
+
+    def test_na_vercel_com_allowed_origins_curinga_falha(self):
+        r = _importar_api(VERCEL="1", DATABASE_URL="postgresql://u:s@h/db", SECRET_KEY="x" * 64,
+                          ALLOWED_ORIGINS="*")
+        assert r.returncode != 0
+        assert "ALLOWED_ORIGINS" in r.stderr
+
+    def test_fora_da_vercel_sem_allowed_origins_ainda_sobe(self):
+        """Local continua funcionando sem configurar nada."""
+        r = _importar_api(ALLOWED_ORIGINS="")
         assert r.returncode == 0, r.stderr[-400:]
 
 
@@ -872,3 +892,45 @@ class TestAdminEdicaoCondominio:
         resp = client.delete(f"/api/admin/condominiums/{c['id']}", headers=auth(token))
         assert resp.status_code == 400
         assert "5" in resp.json()["detail"]  # os 5 usuarios demo do Recanto
+
+
+class TestHeadersDeSeguranca:
+    """Auditoria de 2026-09-21: producao respondia sem nenhum header de seguranca."""
+
+    ESPERADOS = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+    }
+
+    def test_headers_presentes_no_html(self):
+        r = client.get("/")
+        for nome, valor in self.ESPERADOS.items():
+            assert r.headers.get(nome) == valor, f"{nome} ausente ou diferente"
+        assert "Content-Security-Policy" in r.headers
+        assert "Permissions-Policy" in r.headers
+
+    def test_headers_presentes_na_api(self):
+        r = client.get("/api/health")
+        for nome, valor in self.ESPERADOS.items():
+            assert r.headers.get(nome) == valor
+
+    def test_headers_presentes_em_resposta_de_erro(self):
+        """401 tambem passa pelo middleware — erro nao pode escapar sem header."""
+        r = client.get("/api/auth/me")
+        assert r.status_code == 401
+        assert r.headers.get("X-Content-Type-Options") == "nosniff"
+
+    def test_csp_bloqueia_iframe_e_recurso_externo(self):
+        csp = client.get("/").headers["Content-Security-Policy"]
+        assert "frame-ancestors 'none'" in csp   # clickjacking
+        assert "default-src 'self'" in csp       # nada de dominio externo
+        assert "object-src 'none'" in csp
+
+    def test_csp_permite_o_que_o_index_html_usa(self):
+        """CSP restritiva demais quebraria o app: ha <script>/<style> inline,
+        27 onclick= e o download do PDF via blob:."""
+        csp = client.get("/").headers["Content-Security-Policy"]
+        assert "script-src 'self' 'unsafe-inline'" in csp
+        assert "style-src 'self' 'unsafe-inline'" in csp
+        assert "blob:" in csp

@@ -135,8 +135,16 @@ app = FastAPI(title="CondoMarket", lifespan=lifespan)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 _raw_origins = _env("ALLOWED_ORIGINS", "")
+# Um aviso no log nao impediu que a producao subisse com CORS liberado para qualquer
+# origem (auditoria de 2026-09-21). Mesmo tratamento dado a SECRET_KEY: na Vercel, falha
+# rapida — e melhor o deploy quebrar do que servir o app com a origem aberta.
+if os.environ.get("VERCEL") and (not _raw_origins or _raw_origins.strip() == "*"):
+    raise RuntimeError(
+        "ALLOWED_ORIGINS nao definida (ou igual a '*'). Na Vercel defina em Settings > "
+        "Environment Variables a origem do site, ex.: "
+        "ALLOWED_ORIGINS=https://condomarket-three.vercel.app"
+    )
 if not _raw_origins or _raw_origins.strip() == "*":
-    import warnings
     warnings.warn(
         "ALLOWED_ORIGINS nao definida ou configurada como '*'. "
         "Defina ALLOWED_ORIGINS=https://seudominio.com antes de ir para producao.",
@@ -155,7 +163,50 @@ app.add_middleware(
 
 if not IS_TESTING:
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        """Igual ao handler do slowapi, mas informando quando tentar de novo."""
+        resp = _rate_limit_exceeded_handler(request, exc)
+        # "10 per 1 minute" -> a janela e de 1 minuto; e o unico intervalo em uso aqui.
+        resp.headers["Retry-After"] = "60"
+        return resp
+
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
+
+# ── Headers de seguranca ──────────────────────────────────────────────────────
+# O app nao carrega nenhum recurso externo (sem CDN, sem Google Fonts), entao
+# 'self' basta. 'unsafe-inline' e obrigatorio enquanto o index.html tiver o bloco
+# <script>/<style> embutido e os 27 onclick= no HTML.
+# ponytail: CSP com 'unsafe-inline' nao barra XSS inline — barra script externo,
+# clickjacking e exfiltracao para outro dominio. Para barrar inline tambem, trocar
+# os onclick= por addEventListener e migrar para CSP com nonce.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'"
+)
+_SECURITY_HEADERS = {
+    "Content-Security-Policy": _CSP,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",           # frame-ancestors para navegador antigo
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=(), payment=()",
+}
+
+
+@app.middleware("http")
+async def adicionar_headers_de_seguranca(request: Request, call_next):
+    response = await call_next(request)
+    for nome, valor in _SECURITY_HEADERS.items():
+        response.headers.setdefault(nome, valor)
+    return response
 
 
 # ── Modelos Pydantic ──────────────────────────────────────────────────────────
